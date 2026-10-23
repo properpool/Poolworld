@@ -1,3 +1,120 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Pool World 0.1</title><style>*{box-sizing:border-box}body{margin:0;background:#101923;color:#f5f5f5;font:15px system-ui;text-align:center}header{padding:13px 10px 4px}h1{margin:0;font-size:25px;color:#f6d37a}p{margin:5px 0;color:#cbd5df}canvas{display:block;width:min(96vw,760px);height:auto;margin:12px auto;touch-action:none;border-radius:13px;box-shadow:0 8px 30px #0008}.controls{max-width:680px;margin:auto;padding:0 14px 30px}input{width:100%;accent-color:#e7b84c}button{border:0;border-radius:10px;background:#f0c35c;color:#1b2027;font-weight:800;padding:13px 20px;font-size:16px;margin:8px}#status{min-height:28px;font-weight:650}.small{font-size:13px}.tablewrap{position:relative;width:min(96vw,760px);margin:12px auto;aspect-ratio:760/420}.tablewrap canvas{position:absolute;inset:0;width:100%;margin:0}.tablewrap svg{position:absolute;inset:0;width:100%;height:100%;border-radius:13px}#warning{margin:6px auto;padding:8px 12px;color:#f6d37a;font-size:12px;max-width:680px}</style></head><body><header><h1>🎱 POOL WORLD</h1><p>Prototype 0.1 • Free practice mode</p></header><div class="tablewrap"><svg id="fallback" viewBox="0 0 760 420" xmlns="http://www.w3.org/2000/svg"><rect width="760" height="420" fill="#51331f"/><rect x="17" y="17" width="726" height="386" rx="12" fill="#9a6339"/><rect x="43" y="43" width="674" height="334" rx="5" fill="#117447"/><g fill="#080d0c"><circle cx="46" cy="46" r="20"/><circle cx="380" cy="42" r="20"/><circle cx="714" cy="46" r="20"/><circle cx="46" cy="374" r="20"/><circle cx="380" cy="378" r="20"/><circle cx="714" cy="374" r="20"/></g><circle cx="210" cy="210" r="11" fill="white"/><g fill="#f7c733"><circle cx="485" cy="210" r="11"/><circle cx="522" cy="189" r="11"/><circle cx="559" cy="168" r="11"/><circle cx="559" cy="210" r="11"/><circle cx="559" cy="252" r="11"/></g><g fill="#e44d43"><circle cx="504" cy="199" r="11"/><circle cx="522" cy="210" r="11"/><circle cx="541" cy="199" r="11"/><circle cx="541" cy="220" r="11"/></g><g fill="#2563eb"><circle cx="504" cy="220" r="11"/><circle cx="522" cy="232" r="11"/><circle cx="541" cy="178" r="11"/><circle cx="541" cy="242" r="11"/></g><circle cx="522" cy="189" r="11" fill="#111"/><circle cx="559" cy="189" r="11" fill="#a855f7"/><circle cx="559" cy="231" r="11" fill="#16a34a"/></svg><canvas id="table" width="760" height="420"></canvas></div><div id="warning" role="status">If the table is visible but shooting does not work, your browser may be blocking scripts in downloaded files. Try opening the file from Samsung My Files, or use a hosted web link.</div><div class="controls"><div id="status">Drag on the table to aim, then shoot!</div><label for="power">Shot power: <b id="powerText">55%</b></label><input id="power" type="range" min="8" max="100" value="55"><div><button id="shoot">SHOOT 🎯</button><button id="reset">RACK BALLS ↻</button></div><p class="small">Aim by dragging anywhere on the table. Pot the coloured balls. Avoid potting the white cue ball!</p><p class="small" id="score">Balls potted: 0 / 15</p></div><script>
-const c=document.getElementById('table'),ctx=c.getContext('2d');const W=760,H=420,left=46,right=714,top=46,bottom=374,r=10.3;const pockets=[[left,top],[W/2,top-4],[right,top],[left,bottom],[W/2,bottom+4],[right,bottom]];let balls=[],aim=-Math.PI/2,dragging=false,moving=false,potted=0,shots=0;const status=document.getElementById('status'),power=document.getElementById('power');power.oninput=()=>document.getElementById('powerText').textContent=power.value+'%';function rack(){balls=[];potted=0;shots=0;aim=0;const colors=['#f8cf37','#3072dc','#d94144','#8e4dc5','#ed8e30','#35a66b','#873c33','#171717','#f8cf37','#3072dc','#d94144','#8e4dc5','#ed8e30','#35a66b','#873c33'];balls.push({x:210,y:210,vx:0,vy:0,color:'#fff',n:0,live:true});let n=0;for(let row=0;row<5;row++)for(let j=0;j<=row;j++){balls.push({x:485+row*18.5,y:210+(j-row/2)*21.5,vx:0,vy:0,color:colors[n],n:n+1,live:true});n++}status.textContent='Drag to aim, then shoot!';updateScore()}function updateScore(){document.getElementById('score').textContent=`Balls potted: ${potted} / 15 • Shots: ${shots}`}function draw(){ctx.fillStyle='#3b261c';ctx.fillRect(0,0,W,H);ctx.fillStyle='#825633';ctx.fillRect(17,17,W-34,H-34);ctx.fillStyle='#154b36';ctx.fillRect(33,33,W-66,H-66);ctx.fillStyle='#137548';ctx.fillRect(left,top,right-left,bottom-top);ctx.strokeStyle='#a7a66b';ctx.lineWidth=1.5;ctx.strokeRect(left+24,top+24,right-left-48,bottom-top-48);ctx.beginPath();ctx.moveTo(210,top);ctx.lineTo(210,bottom);ctx.stroke();for(const [x,y] of pockets){ctx.beginPath();ctx.arc(x,y,20,0,Math.PI*2);ctx.fillStyle='#070d0d';ctx.fill()}for(const b of balls){if(!b.live)continue;ctx.beginPath();ctx.arc(b.x+2,b.y+3,r,0,Math.PI*2);ctx.fillStyle='#0006';ctx.fill();ctx.beginPath();ctx.arc(b.x,b.y,r,0,Math.PI*2);ctx.fillStyle=b.color;ctx.fill();ctx.beginPath();ctx.arc(b.x-3,b.y-4,3.2,0,Math.PI*2);ctx.fillStyle='#ffffff8a';ctx.fill();if(b.n){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(b.x,b.y,5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#111';ctx.font='bold 7px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(b.n,b.x,b.y)}}const cue=balls[0];if(cue.live&&!moving){const dx=Math.cos(aim),dy=Math.sin(aim);ctx.save();ctx.setLineDash([9,8]);ctx.strokeStyle='#fff9';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cue.x+dx*15,cue.y+dy*15);ctx.lineTo(cue.x+dx*220,cue.y+dy*220);ctx.stroke();ctx.restore();ctx.strokeStyle='#c99a59';ctx.lineWidth=7;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(cue.x-dx*17,cue.y-dy*17);ctx.lineTo(cue.x-dx*185,cue.y-dy*185);ctx.stroke();ctx.strokeStyle='#fff2c1';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(cue.x-dx*17,cue.y-dy*17);ctx.lineTo(cue.x-dx*27,cue.y-dy*27);ctx.stroke()}requestAnimationFrame(draw)}function physics(){let any=false;for(const b of balls){if(!b.live)continue;b.x+=b.vx;b.y+=b.vy;b.vx*=.988;b.vy*=.988;if(Math.abs(b.vx)<.025)b.vx=0;if(Math.abs(b.vy)<.025)b.vy=0;if(b.vx||b.vy)any=true;let sunk=false;for(const [px,py] of pockets)if(Math.hypot(b.x-px,b.y-py)<17){b.live=false;sunk=true;if(b.n){potted++;status.textContent=`Potted ball ${b.n}!`}else status.textContent='Scratch! White ball will be replaced.';updateScore();break}if(sunk)continue;if(b.x<left+r){b.x=left+r;b.vx=Math.abs(b.vx)*.88}if(b.x>right-r){b.x=right-r;b.vx=-Math.abs(b.vx)*.88}if(b.y<top+r){b.y=top+r;b.vy=Math.abs(b.vy)*.88}if(b.y>bottom-r){b.y=bottom-r;b.vy=-Math.abs(b.vy)*.88}}for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){const a=balls[i],b=balls[j];if(!a.live||!b.live)continue;let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d>=2*r||d<.001)continue;const nx=dx/d,ny=dy/d,over=2*r-d;a.x-=nx*over/2;a.y-=ny*over/2;b.x+=nx*over/2;b.y+=ny*over/2;const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(rel<0){const impulse=-rel*.97;a.vx-=impulse*nx;a.vy-=impulse*ny;b.vx+=impulse*nx;b.vy+=impulse*ny}}if(moving&&!any){moving=false;if(!balls[0].live){const white=balls[0];white.live=true;white.x=210;white.y=210;white.vx=0;white.vy=0;for(const b of balls.slice(1))if(b.live&&Math.hypot(b.x-white.x,b.y-white.y)<23){white.x=160;break}}if(potted===15)status.textContent=`Table cleared in ${shots} shots! 🎉`;else if(status.textContent==='Shot taken!')status.textContent='Ready for next shot.'} }function shoot(){if(moving||!balls[0].live)return;const v=Number(power.value)/100*17;balls[0].vx=Math.cos(aim)*v;balls[0].vy=Math.sin(aim)*v;shots++;moving=true;status.textContent='Shot taken!';updateScore()}function pointer(e){const rect=c.getBoundingClientRect();const x=(e.clientX-rect.left)*W/rect.width,y=(e.clientY-rect.top)*H/rect.height;const cue=balls[0];if(!moving&&cue.live&&Math.hypot(x-cue.x,y-cue.y)>12)aim=Math.atan2(y-cue.y,x-cue.x)}c.addEventListener('pointerdown',e=>{dragging=true;c.setPointerCapture(e.pointerId);pointer(e)});c.addEventListener('pointermove',e=>{if(dragging)pointer(e)});c.addEventListener('pointerup',()=>dragging=false);document.getElementById('shoot').onclick=shoot;document.getElementById('reset').onclick=rack;rack();draw();document.getElementById('fallback').style.display='none';document.getElementById('warning').style.display='none';setInterval(physics,1000/60);
-</script></body></html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pool World</title>
+<style>
+body{margin:0;background:#101924;color:white;font-family:Arial;text-align:center;padding:15px}
+h1{color:#f4c45e}
+canvas{width:100%;max-width:700px;background:#126b43;border:8px solid #87502e;border-radius:15px;box-sizing:border-box;touch-action:none}
+button{background:#f4c45e;border:0;border-radius:12px;padding:17px 25px;font-size:19px;font-weight:bold;margin:8px}
+input{width:85%}
+</style>
+</head>
+<body>
+<h1>🎱 POOL WORLD</h1>
+<p>Prototype 0.3 - Shooting Test</p>
+<canvas id="table" width="600" height="320"></canvas>
+<p>Tap the table to aim. Press SHOOT!</p>
+<p id="status">Ready to play</p>
+<p>Shot power: <span id="powerText">55</span>%</p>
+<input id="power" type="range" min="10" max="100" value="55">
+<div>
+<button id="shoot">🎯 SHOOT</button>
+<button id="reset">↻ RACK BALLS</button>
+</div>
+<script>
+const canvas=document.getElementById("table");
+const ctx=canvas.getContext("2d");
+const status=document.getElementById("status");
+const power=document.getElementById("power");
+const powerText=document.getElementById("powerText");
+let balls=[],aim={x:1,y:0},moving=false;
+const pockets=[[18,18],[300,14],[582,18],[18,302],[300,306],[582,302]];
+function rack(){
+balls=[{x:150,y:160,vx:0,vy:0,c:"white",cue:true}];
+let colors=["#f6d12b","#1769d3","#e33137","#8039bc","#ed8422","#17834b","#752d29","#111111"];
+let n=0;
+for(let row=0;row<5;row++){
+for(let j=0;j<=row;j++){
+balls.push({x:420+row*18,y:160+(j-row/2)*21,vx:0,vy:0,c:colors[n%8]});
+n++;
+}}
+aim={x:1,y:0};
+moving=false;
+status.textContent="Ready to play";
+}
+function draw(){
+ctx.fillStyle="#126b43";ctx.fillRect(0,0,600,320);
+ctx.strokeStyle="#b5a16c";ctx.lineWidth=3;ctx.strokeRect(18,18,564,284);
+for(const p of pockets){
+ctx.beginPath();ctx.arc(p[0],p[1],17,0,Math.PI*2);ctx.fillStyle="#080808";ctx.fill();
+}
+for(const b of balls){
+ctx.beginPath();ctx.arc(b.x,b.y,9,0,Math.PI*2);
+ctx.fillStyle=b.c;ctx.fill();
+ctx.strokeStyle="#ffffff66";ctx.lineWidth=1;ctx.stroke();
+}
+if(!moving&&balls[0]){
+const b=balls[0];
+ctx.beginPath();ctx.moveTo(b.x,b.y);
+ctx.lineTo(b.x+aim.x*130,b.y+aim.y*130);
+ctx.strokeStyle="white";ctx.setLineDash([8,7]);ctx.lineWidth=2;ctx.stroke();ctx.setLineDash([]);
+}
+}
+function tick(){
+if(moving){
+let active=false;
+for(const b of balls){
+b.x+=b.vx;b.y+=b.vy;
+b.vx*=0.985;b.vy*=0.985;
+if(b.x<27||b.x>573){b.vx*=-0.85;b.x=Math.max(27,Math.min(573,b.x));}
+if(b.y<27||b.y>293){b.vy*=-0.85;b.y=Math.max(27,Math.min(293,b.y));}
+if(Math.hypot(b.vx,b.vy)>0.04)active=true;
+else{b.vx=0;b.vy=0;}
+}
+for(let i=0;i<balls.length;i++){
+for(let j=i+1;j<balls.length;j++){
+let a=balls[i],b=balls[j],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
+if(d>0&&d<18){
+let nx=dx/d,ny=dy/d,overlap=(18-d)/2;
+a.x-=nx*overlap;a.y-=ny*overlap;
+b.x+=nx*overlap;b.y+=ny*overlap;
+let relative=(a.vx-b.vx)*nx+(a.vy-b.vy)*ny;
+if(relative>0){
+a.vx-=relative*nx;a.vy-=relative*ny;
+b.vx+=relative*nx;b.vy+=relative*ny;
+}
+}
+}
+}
+if(!active){moving=false;status.textContent="Ready for next shot";}
+}
+draw();
+requestAnimationFrame(tick);
+}
+canvas.addEventListener("pointerdown",function(e){
+if(moving)return;
+const r=canvas.getBoundingClientRect();
+let x=(e.clientX-r.left)*600/r.width;
+let y=(e.clientY-r.top)*320/r.height;
+let dx=x-balls[0].x,dy=y-balls[0].y;
+let d=Math.hypot(dx,dy);
+if(d>1){aim={x:dx/d,y:dy/d};status.textContent="Aim set! Press SHOOT";}
+});
+power.addEventListener("input",()=>powerText.textContent=power.value);
+document.getElementById("shoot").addEventListener("click",()=>{
+if(moving)return;
+balls[0].vx=aim.x*Number(power.value)*0.18;
+balls[0].vy=aim.y*Number(power.value)*0.18;
+moving=true;
+status.textContent="SHOT FIRED!";
+});
+document.getElementById("reset").addEventListener("click",rack);
+rack();
+tick();
+</script>
+</body>
+</html>
