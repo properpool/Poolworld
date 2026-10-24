@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Pool World — Match Engine v5.8</title><style>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Pool World — Match Engine v5.9</title><style>
 *{box-sizing:border-box}body{margin:0;background:#101b22;color:#ecf5f2;font:14px system-ui,Arial;overscroll-behavior:none}header{height:49px;display:flex;justify-content:space-between;align-items:center;padding:0 15px;background:#13242c;border-bottom:1px solid #29434a}header b{letter-spacing:2px;color:#e5c87b}.topbtn{border:1px solid #47606a;background:#203741;color:#fff;border-radius:8px;padding:8px 10px}.wrap{max-width:1150px;margin:auto;padding:10px}.score{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;margin-bottom:9px;background:#192c34;border-radius:9px}.score strong{color:#f0ce7c}.stage{display:flex;gap:8px;align-items:stretch}.board{flex:1;min-width:0;aspect-ratio:1.93;background:#080f13;border-radius:13px;overflow:hidden;box-shadow:0 10px 30px #0009;touch-action:none}canvas{width:100%;height:100%;display:block;touch-action:none}.power{width:78px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#192c34;border:1px solid #3a545e;border-radius:12px;touch-action:none;user-select:none}.power label{font-size:11px;letter-spacing:1px;color:#a9c0c7}.track{width:38px;height:68%;min-height:115px;max-height:320px;background:linear-gradient(#1b3942,#10242b);border:2px solid #58747d;border-radius:23px;position:relative;touch-action:none;overflow:hidden}.fill{position:absolute;top:0;left:0;right:0;background:linear-gradient(#eccb7e,#bd703a);height:0;opacity:.75}.handle{position:absolute;top:0;left:50%;transform:translate(-50%,-50%);width:42px;height:42px;border-radius:50%;border:3px solid #fff3c9;background:radial-gradient(circle at 30% 20%,#fff5d1,#d1a44e 65%,#6c461a);box-shadow:0 2px 8px #0009}.tip{font-size:10px;text-align:center;color:#b8cbd0;padding:8px 4px}.actions{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}.actions button{padding:10px 15px;border-radius:9px;border:1px solid #5c757c;background:#25434b;color:white;font-weight:700}.actions .shoot{background:#c59b54;color:#172129;border-color:#f0c879}.status{text-align:center;margin:9px 0;color:#d5e3df;min-height:22px}.hint{text-align:center;color:#91aeb7;font-size:12px}details{margin-top:12px;border:1px solid #2c4952;border-radius:9px;padding:8px}summary{cursor:pointer}.settings{display:flex;gap:15px;flex-wrap:wrap;padding:10px}.settings label{display:flex;gap:8px;align-items:center}input[type=range]{width:120px}@media(max-width:600px){header{height:42px}.wrap{padding:5px}.score{margin-bottom:5px;font-size:12px}.stage{gap:3px}.power{width:49px;border-radius:7px}.power label{font-size:8px}.track{width:26px;min-height:75px}.handle{width:32px;height:32px}.tip{font-size:8px}.actions{margin-top:8px}.actions button{padding:8px 10px}.hint{font-size:11px}}@media(orientation:portrait) and (max-width:600px){.board{aspect-ratio:1.8}.stage{align-items:stretch}}
 /* Compact landscape game controls: keep the table, pullback and SHOOT visible. */
 @media(orientation:landscape) and (max-height:480px){
@@ -11,7 +11,7 @@
  .actions{margin-top:4px;gap:4px}.actions button{padding:5px 8px;font-size:11px}
  .hint{display:none}details{margin-top:5px}
 }
-</style></head><body><header><b>POOL WORLD</b><span>Local match engine · v5.8</span><button class="topbtn" id="sound">🔊</button></header><div class="wrap"><div class="score"><span id="player">PLAYER 1 · OPEN TABLE</span><strong id="phase">READY TO BREAK</strong><span id="remaining">15 balls</span></div><div class="stage"><div class="board"><canvas id="table" width="1100" height="570"></canvas></div><div class="power" id="powerControl"><label>POWER</label><div class="track" id="track"><div class="fill" id="fill"></div><div class="handle" id="handle"></div></div><div class="tip">PULL<br>DOWN</div></div></div><div class="status" id="status">Drag across the table to aim. Pull the power handle down and release to shoot.</div><div class="actions"><button id="aimLeft" aria-label="Fine aim left half a degree">◀ 0.5°</button><button class="shoot" id="shoot">SHOOT</button><button id="aimRight" aria-label="Fine aim right half a degree">0.5° ▶</button><button id="precision" aria-pressed="false" aria-label="Toggle precision drag aiming">PRECISION: OFF</button><button id="reset">NEW RACK</button><button id="undo">RETRY SHOT</button><button id="guide">GUIDE: ON</button></div><div class="hint">Tap the table to aim · PRECISION: drag sideways for tiny adjustments without snapping · Pull down to shoot · Original 3.9 sounds retained</div><details><summary>Shot adjustments</summary><div class="settings"><label>Power <input id="strength" type="range" min="5" max="100" value="45"></label><label>Side spin <input id="spin" type="range" min="-100" max="100" value="0"></label><label>Top / backspin <input id="follow" type="range" min="-100" max="100" value="0"></label></div></details></div><script>
+</style></head><body><header><b>POOL WORLD</b><span>Local match engine · v5.9</span><button class="topbtn" id="sound">🔊</button></header><div class="wrap"><div class="score"><span id="player">PLAYER 1 · OPEN TABLE</span><strong id="phase">READY TO BREAK</strong><span id="remaining">15 balls</span></div><div class="stage"><div class="board"><canvas id="table" width="1100" height="570"></canvas></div><div class="power" id="powerControl"><label>POWER</label><div class="track" id="track"><div class="fill" id="fill"></div><div class="handle" id="handle"></div></div><div class="tip">PULL<br>DOWN</div></div></div><div class="status" id="status">Drag across the table to aim. Pull the power handle down and release to shoot.</div><div class="actions"><button id="aimLeft" aria-label="Fine aim left half a degree">◀ 0.5°</button><button class="shoot" id="shoot">SHOOT</button><button id="aimRight" aria-label="Fine aim right half a degree">0.5° ▶</button><button id="precision" aria-pressed="false" aria-label="Toggle precision drag aiming">PRECISION: OFF</button><button id="reset">NEW RACK</button><button id="undo">RETRY SHOT</button><button id="guide">GUIDE: ON</button></div><div class="hint">Tap the table to aim · PRECISION: drag sideways for tiny adjustments without snapping · Pull down to shoot · Original 3.9 sounds retained</div><details><summary>Shot adjustments</summary><div class="settings"><label>Power <input id="strength" type="range" min="5" max="100" value="45"></label><label>Side spin <input id="spin" type="range" min="-100" max="100" value="0"></label><label>Top / backspin <input id="follow" type="range" min="-100" max="100" value="0"></label></div></details></div><script>
 "use strict";
 const canvas=document.getElementById("table"),ctx=canvas.getContext("2d"),$=id=>document.getElementById(id);
 const W=1100,H=570, L=79,R=1021,T=78,B=492,rad=12.2, pocket=27, pi=Math.PI;
@@ -23,24 +23,34 @@ const jaws=[
   ...[T,B].flatMap(y=>[[L+mouth,y],[W/2-mouth,y],[W/2+mouth,y],[R-mouth,y]]),
   ...[L,R].flatMap(x=>[[x,T+mouth],[x,B-mouth]])
 ];
+// Fixed cushion/jaw contact with a dissipative rigid-sphere impulse.
+// Ball mass=1, moment of inertia I=.4*m*r^2. Spin is omega*r.
+// A tangent impulse consumes surface slip and transfers translational/rotational
+// energy; Coulomb limit ensures a bounded response at the rubber contact.
+function reflectCushion(b,nx,ny,restitution,friction){
+  const vn=b.vx*nx+b.vy*ny;
+  if(vn>=0)return false;
+  const normalImpulse=-(1+restitution)*vn;
+  b.vx+=normalImpulse*nx;b.vy+=normalImpulse*ny;
+  const tx=-ny,ty=nx;
+  const slip=b.vx*tx+b.vy*ty-b.spin;
+  const maxTangent=friction*normalImpulse;
+  const tangentImpulse=Math.max(-maxTangent,Math.min(maxTangent,-slip/3.5));
+  b.vx+=tangentImpulse*tx;b.vy+=tangentImpulse*ty;
+  b.spin-=2.5*tangentImpulse;
+  if(-vn>.06){events.push(['rail',Math.min(1,-vn/5)]);if(shot&&shot.firstHit!==null)shot.railAfterContact=true;}
+  return true;
+}
 function collideJaw(b){
   for(const [jx,jy] of jaws){
     let dx=b.x-jx,dy=b.y-jy,dist2=dx*dx+dy*dy;
     const min=rad+jawRadius;
     if(dist2>=min*min)continue;
-    let d=Math.sqrt(dist2);
-    if(d<1e-7){const speed=Math.hypot(b.vx,b.vy);dx=speed? -b.vx/speed:1;dy=speed? -b.vy/speed:0;d=1;}
-    const nx=dx/d,ny=dy/d;
-    b.x+=nx*(min-d+0.001);b.y+=ny*(min-d+0.001);
-    const vn=b.vx*nx+b.vy*ny;
-    if(vn<0){
-      const normalImpulse=(1+.76)*vn;
-      b.vx-=normalImpulse*nx;b.vy-=normalImpulse*ny;
-      // Slight tangential loss on the cushion nose, never an acceleration.
-      const tangent=b.vx*(-ny)+b.vy*nx;
-      b.vx+=tangent*.025*ny;b.vy-=tangent*.025*nx;
-      if(-vn>.06){events.push(['rail',Math.min(1,-vn/5)]);if(shot&&shot.firstHit!==null)shot.railAfterContact=true;}
-    }
+    let d=Math.sqrt(dist2),nx,ny;
+    if(d<1e-7){const speed=Math.hypot(b.vx,b.vy);nx=speed?-b.vx/speed:1;ny=speed?-b.vy/speed:0;d=0;}
+    else{nx=dx/d;ny=dy/d;}
+    b.x+=nx*(min-d+.001);b.y+=ny*(min-d+.001);
+    reflectCushion(b,nx,ny,.76,.04);
   }
 }
 
@@ -142,13 +152,12 @@ function drawAim(){const c=balls[0],dx=Math.cos(aim),dy=Math.sin(aim);if(guide){
 // Physics: fixed 120Hz steps; translational and rotational impulses bounded.
 const STEP=1/120;let accumulator=0,last=0;
 function physics(dt){const scale=dt*60;for(const b of balls){if(b.potted)continue;const speed=Math.hypot(b.vx,b.vy);if(speed>0){const decel=(.012+.0016*Math.min(speed,4))*scale;const f=Math.max(0,(speed-decel)/speed);b.vx*=f;b.vy*=f;if(speed<.021){b.vx=b.vy=0}b.x+=b.vx*scale;b.y+=b.vy*scale;// Side-spin (English) changes rail contacts, not the free-flight path of a rolling ball.
-      b.spin*=Math.pow(.984,scale);b.follow*=Math.pow(.995,scale)}for(const [hx,hy] of holes){if(Math.hypot(b.x-hx,b.y-hy)<pocket*.74){pocketBall(b);break}}if(b.potted)continue;collideJaw(b);for(let axis of ['x','y']){let pos=b[axis],lo=axis==='x'?L+rad:T+rad,hi=axis==='x'?R-rad:B-rad;if(pos<lo||pos>hi){const closest=axis==='x'?(pos<lo?L:R):(pos<lo?T:B);const cross=axis==='x'?b.y:b.x;const nearPocket=holes.some(([hx,hy])=>axis==='x'?Math.abs(hx-closest)<1&&Math.abs(hy-cross)<pocket*1.2:Math.abs(hy-closest)<12&&Math.abs(hx-cross)<pocket*1.2);if(nearPocket){if(pos<lo-rad||pos>hi+rad){pocketBall(b)}continue}b[axis]=Math.max(lo,Math.min(hi,pos));const vel=axis==='x'?'vx':'vy';if(Math.abs(b[vel])>.06){events.push(['rail',Math.abs(b[vel])/5]);if(shot&&shot.firstHit!==null)shot.railAfterContact=true}const impact=Math.abs(b[vel]);
-      // The tangential cushion impulse depends on the incoming spin and wall side.
-      // Consume spin on contact and cap the speed change to prevent runaway rails.
-      const wallSign=axis==='x'?(pos<lo?1:-1):(pos<lo?-1:1);
-      const english=Math.max(-.45,Math.min(.45,wallSign*b.spin*impact*.11));
-      b[vel]*=-.78;const tangentAxis=axis==='x'?'vy':'vx';
-      b[tangentAxis]=b[tangentAxis]*.985+english;b.spin*=.68}}}
+      b.spin*=Math.pow(.984,scale);b.follow*=Math.pow(.995,scale)}for(const [hx,hy] of holes){if(Math.hypot(b.x-hx,b.y-hy)<pocket*.74){pocketBall(b);break}}if(b.potted)continue;collideJaw(b);for(let axis of ['x','y']){let pos=b[axis],lo=axis==='x'?L+rad:T+rad,hi=axis==='x'?R-rad:B-rad;if(pos<lo||pos>hi){const closest=axis==='x'?(pos<lo?L:R):(pos<lo?T:B);const cross=axis==='x'?b.y:b.x;const nearPocket=holes.some(([hx,hy])=>axis==='x'?Math.abs(hx-closest)<1&&Math.abs(hy-cross)<pocket*1.2:Math.abs(hy-closest)<12&&Math.abs(hx-cross)<pocket*1.2);if(nearPocket){if(pos<lo-rad||pos>hi+rad){pocketBall(b)}continue}b[axis]=Math.max(lo,Math.min(hi,pos));const vel=axis==='x'?'vx':'vy';// Inward wall normal. Rail restitution and tangent friction are
+      // dissipative even for large English; spin can drive rail throw only
+      // by releasing rotational energy already carried by the ball.
+      const nx=axis==='x'?(pos<lo?1:-1):0;
+      const ny=axis==='y'?(pos<lo?1:-1):0;
+      reflectCushion(b,nx,ny,.78,.04);}}}
 for(let i=0;i<balls.length;i++){const a=balls[i];if(a.potted)continue;for(let j=i+1;j<balls.length;j++){const b=balls[j];if(b.potted)continue;let dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy,min=rad*2;if(d2>=min*min)continue;let d=Math.sqrt(d2),nx,ny;
  // An exact centre overlap must separate; use relative motion as a stable normal.
  if(d<1e-6){const rvx=b.vx-a.vx,rvy=b.vy-a.vy,rv=Math.hypot(rvx,rvy);nx=rv>1e-8?-rvx/rv:1;ny=rv>1e-8?-rvy/rv:0;d=0}
