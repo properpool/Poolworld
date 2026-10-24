@@ -1,0 +1,39 @@
+name: Pool World staging gameplay tests
+on:
+  push:
+    branches:
+      - development/poolworld-match-engine
+  workflow_dispatch:
+jobs:
+  browser-and-physics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright==1.57.0
+          python -m playwright install --with-deps chromium
+      - name: Check JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('POOL_WORLD_5.2_STAGING_MATCH.html')
+          Path('pool52.js').write_text(p.read_text().split('<script>',1)[1].split('</script>',1)[0])
+          PY
+          node --check pool52.js
+      - name: Run browser and physics regression tests
+        run: python tests/test_pool52.py
+      - name: Store test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: poolworld-staging-test-results
+          path: |
+            POOL_WORLD_5.2_TEST_RESULTS.json
+            pool52_mobile_test.png
+          if-no-files-found: ignore
