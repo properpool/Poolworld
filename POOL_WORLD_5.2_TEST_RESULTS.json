@@ -1,0 +1,274 @@
+{
+  "passed": 29,
+  "total": 29,
+  "checks": [
+    {
+      "name": "approved v3.9 ball audio unchanged",
+      "passed": true,
+      "details": "6e0440053e5859b48fa1"
+    },
+    {
+      "name": "approved v3.9 cue audio unchanged",
+      "passed": true,
+      "details": "7e2b39137a6de6afd751"
+    },
+    {
+      "name": "approved v3.9 rail audio unchanged",
+      "passed": true,
+      "details": "e405df7c5c3c3937a6e2"
+    },
+    {
+      "name": "approved v3.9 pocket audio unchanged",
+      "passed": true,
+      "details": "6931e106287f67f9b771"
+    },
+    {
+      "name": "initial game state",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "mobile viewport no overflow",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "all four approved sound sources embedded",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "actual SHOOT button starts moving",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "actual browser shot settles and transitions",
+      "passed": true,
+      "details": {
+        "count": 16,
+        "turn": 2,
+        "breakShot": false,
+        "status": "Player 2 to shoot.",
+        "firstHit": 16
+      }
+    },
+    {
+      "name": "actual SHOOT remains usable after first shot",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "break contacts object ball and settles",
+      "passed": true,
+      "details": {
+        "steps": 587,
+        "stopped": true,
+        "firstHit": 1,
+        "turn": 2,
+        "breakShot": false
+      }
+    },
+    {
+      "name": "scratch awards ball in hand to opponent",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "occupied cue placement rejected",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "valid touch placement accepted",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "undo restores complete state",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "rule assignment",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "rule wrongContact",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "rule noRail",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "rule earlyEight",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "rule legalEight",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "rule eightBreakRerack",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "actual pullback gesture fires a shot",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "power gesture shot settles",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "full 8-ball physical sequence (position-controlled fixture)",
+      "passed": true,
+      "details": [
+        {
+          "target": 1,
+          "fired": true,
+          "steps": 110,
+          "hit": 1,
+          "pocketed": [
+            1
+          ],
+          "turn": 1,
+          "gameOver": false,
+          "winner": null,
+          "status": "Legal pot \u00b7 continue your turn."
+        },
+        {
+          "target": 2,
+          "fired": true,
+          "steps": 110,
+          "hit": 2,
+          "pocketed": [
+            2
+          ],
+          "turn": 1,
+          "gameOver": false,
+          "winner": null,
+          "status": "Legal pot \u00b7 continue your turn."
+        },
+        {
+          "target": 3,
+          "fired": true,
+          "steps": 110,
+          "hit": 3,
+          "pocketed": [
+            3
+          ],
+          "turn": 1,
+          "gameOver": false,
+          "winner": null,
+          "status": "Legal pot \u00b7 continue your turn."
+        },
+        {
+          "target": 4,
+          "fired": true,
+          "steps": 110,
+          "hit": 4,
+          "pocketed": [
+            4
+          ],
+          "turn": 1,
+          "gameOver": false,
+          "winner": null,
+          "status": "Legal pot \u00b7 continue your turn."
+        },
+        {
+          "target": 5,
+          "fired": true,
+          "steps": 110,
+          "hit": 5,
+          "pocketed": [
+            5
+          ],
+          "turn": 1,
+          "gameOver": false,
+          "winner": null,
+          "status": "Legal pot \u00b7 continue your turn."
+        },
+        {
+          "target": 6,
+          "fired": true,
+          "steps": 110,
+          "hit": 6,
+          "pocketed": [
+            6
+          ],
+          "turn": 1,
+          "gameOver": false,
+          "winner": null,
+          "status": "Legal pot \u00b7 continue your turn."
+        },
+        {
+          "target": 7,
+          "fired": true,
+          "steps": 110,
+          "hit": 7,
+          "pocketed": [
+            7
+          ],
+          "turn": 1,
+          "gameOver": false,
+          "winner": null,
+          "status": "Legal pot \u00b7 continue your turn."
+        },
+        {
+          "target": 8,
+          "fired": true,
+          "steps": 110,
+          "hit": 8,
+          "pocketed": [
+            8
+          ],
+          "turn": 1,
+          "gameOver": true,
+          "winner": 1,
+          "status": "PLAYER 1 WINS \u00b7 legal 8-ball finish"
+        }
+      ]
+    },
+    {
+      "name": "SHOOT button remains functional for 20 consecutive matches/turns",
+      "passed": true,
+      "details": {
+        "clicks": 20
+      }
+    },
+    {
+      "name": "physics rail",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "physics pocket",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "80 random shots settle without nonfinite/out-of-bounds",
+      "passed": true,
+      "details": {
+        "completed": 80,
+        "maxSteps": 636,
+        "failures": []
+      }
+    },
+    {
+      "name": "no runtime JavaScript errors",
+      "passed": true,
+      "details": []
+    }
+  ]
+}
