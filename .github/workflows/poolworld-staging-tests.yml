@@ -18,28 +18,34 @@ jobs:
           python -m pip install --upgrade pip
           pip install playwright==1.57.0
           python -m playwright install --with-deps chromium
-      - name: Check v5.3 JavaScript syntax
+      - name: Check v5.4 JavaScript syntax
         run: |
           python - <<'PY'
           from pathlib import Path
-          p=Path('POOL_WORLD_5.3_STAGING_MATCH.html')
-          Path('pool53.js').write_text(p.read_text().split('<script>',1)[1].split('</script>',1)[0])
+          p=Path('POOL_WORLD_5.4_STAGING_MATCH.html')
+          Path('pool54.js').write_text(p.read_text().split('<script>',1)[1].split('</script>',1)[0])
           PY
-          node --check pool53.js
+          node --check pool54.js
       - name: Regression and sound integrity (29 checks)
-        run: python tests/test_pool53_regression.py
+        run: python tests/test_pool54_regression.py
       - name: Mobile controls, rule edge cases, frame timing (31 checks)
-        run: python tests/test_pool53_quality.py
+        run: python tests/test_pool54_quality.py
       - name: Bot-planned full natural-layout match
-        run: python tests/test_pool53_match.py
+        run: python tests/test_pool54_match.py
+      - name: Pocket jaws, cushion rebounds and energy fixtures (8 checks)
+        run: python tests/test_pool54_pockets.py
+      - name: Three varied natural-layout matches and touchscreen ball-in-hand
+        run: python tests/test_pool54_varied_match.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: poolworld-v53-staging-test-results
+          name: poolworld-v54-staging-test-results
           path: |
-            POOL_WORLD_5.3_REGRESSION_RESULTS.json
-            POOL_WORLD_5.3_QUALITY_RESULTS.json
-            POOL_WORLD_5.3_UNSCRIPTED_MATCH_RESULTS.json
-            pool53_mobile_test.png
+            POOL_WORLD_5.4_REGRESSION_RESULTS.json
+            POOL_WORLD_5.4_QUALITY_RESULTS.json
+            POOL_WORLD_5.4_UNSCRIPTED_MATCH_RESULTS.json
+            POOL_WORLD_5.4_POCKET_TEST_RESULTS.json
+            POOL_WORLD_5.4_VARIED_MATCH_RESULTS.json
+            pool54_mobile_test.png
           if-no-files-found: ignore
