@@ -18,40 +18,42 @@ jobs:
           python -m pip install --upgrade pip
           pip install playwright==1.57.0
           python -m playwright install --with-deps chromium
-      - name: Check v5.9 JavaScript syntax
+      - name: Check v6.0 JavaScript syntax
         run: |
           python - <<'PY'
           from pathlib import Path
-          p=Path('POOL_WORLD_5.9_STAGING_MATCH.html')
-          Path('pool59.js').write_text(p.read_text().split('<script>',1)[1].split('</script>',1)[0])
+          p=Path('POOL_WORLD_6.0_STAGING_MATCH.html')
+          Path('pool60.js').write_text(p.read_text().split('<script>',1)[1].split('</script>',1)[0])
           PY
-          node --check pool59.js
+          node --check pool60.js
       - name: Regression and approved sound integrity
-        run: python tests/test_pool59_regression.py
+        run: python tests/test_pool60_regression.py
       - name: Mobile controls, rule edge cases and frame timing
-        run: python tests/test_pool59_quality.py
+        run: python tests/test_pool60_quality.py
       - name: Full natural-layout physical match
-        run: python tests/test_pool59_match.py
+        run: python tests/test_pool60_match.py
       - name: Pocket jaws, cushion rebounds and energy fixtures
-        run: python tests/test_pool59_pockets.py
+        run: python tests/test_pool60_pockets.py
       - name: Three varied full matches and touchscreen ball-in-hand
-        run: python tests/test_pool59_varied_match.py
+        run: python tests/test_pool60_varied_match.py
       - name: Spin, follow/draw and cushion English measurements
-        run: python tests/test_pool59_spin.py
+        run: python tests/test_pool60_spin.py
       - name: Visual canvas pixels and three viewports
-        run: python tests/test_pool59_visual.py
+        run: python tests/test_pool60_visual.py
       - name: Precision aim, pullback safety and landscape controls
-        run: python tests/test_pool59_touch.py
+        run: python tests/test_pool60_touch.py
       - name: Tangential spin transfer and collision energy stress
-        run: python tests/test_pool59_collision.py
+        run: python tests/test_pool60_collision.py
       - name: Bounded cushion and jaw spin transfer (4200 fixtures)
-        run: python tests/test_pool59_cushion_energy.py
+        run: python tests/test_pool60_cushion_energy.py
+      - name: Shot power and six-pocket regression
+        run: python tests/test_pool60_power_pot.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: poolworld-v59-staging-test-results
           path: |
-            POOL_WORLD_5.9_*RESULTS.json
-            pool59_*.png
+            POOL_WORLD_6.0_*RESULTS.json
+            pool60_*.png
           if-no-files-found: ignore
