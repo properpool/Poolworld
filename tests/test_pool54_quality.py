@@ -70,6 +70,6 @@ with sync_playwright() as p:
     page.close();browser.close()
 passed=sum(v['passed'] for v in checks)
 result={'passed':passed,'total':len(checks),'checks':checks,'mobile_frame_timing_is_emulation_only':True}
-(P.parent/'POOL_WORLD_5.3_QUALITY_RESULTS.json').write_text(json.dumps(result,indent=2))
+(P.parent/'POOL_WORLD_5.4_QUALITY_RESULTS.json').write_text(json.dumps(result,indent=2))
 print('SUMMARY',passed,'/',len(checks))
 if passed!=len(checks):raise SystemExit(1)
