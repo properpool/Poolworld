@@ -75,5 +75,5 @@ with sync_playwright() as p:
  assert state['gameOver'] and state['winner'] in (1,2),f'Unscripted match did not finish: {state}'
  assert not errors,errors
  print('UNSCRIPTED_MATCH_PASS',len(match)+1,'shots, winner',state['winner'],flush=True)
- (P.parent/'POOL_WORLD_5.3_UNSCRIPTED_MATCH_RESULTS.json').write_text(json.dumps({'passed':True,'total_shots':len(match)+1,'winner':state['winner'],'shots':match,'browser_errors':errors},indent=2))
+ (P.parent/'POOL_WORLD_5.4_UNSCRIPTED_MATCH_RESULTS.json').write_text(json.dumps({'passed':True,'total_shots':len(match)+1,'winner':state['winner'],'shots':match,'browser_errors':errors},indent=2))
  browser.close()
