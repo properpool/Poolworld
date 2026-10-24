@@ -38,3 +38,7 @@ Next:
 1. Integrate and upload the verified local v5.1 source to this development branch, if the runtime can transfer the generated file to the GitHub connector.
 2. Add repeatable end-to-end match tests and automated CI.
 3. Improve cushions, pockets, shot dynamics, and on-device performance; do not begin graphics polish before gameplay stabilises.
+
+## Session continuation — v5.2 reconstructed and staged
+
+The prior v5.1 local source was unavailable in this runtime. A v5.2 match engine was reconstructed from the Library's v5.0 source and tested locally (29/29 checks; JavaScript syntax passed). See `DEV_LOG_2026-10-24_V5.2.md` for complete test evidence, limitations, and provenance. Staging `index.html` now matches the versioned `POOL_WORLD_5.2_STAGING_MATCH.html` candidate. The published `main` branch remains unchanged. Do not promote until remote CI and real-device/independent match acceptance checks pass.
