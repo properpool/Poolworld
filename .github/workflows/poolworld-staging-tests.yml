@@ -18,32 +18,34 @@ jobs:
           python -m pip install --upgrade pip
           pip install playwright==1.57.0
           python -m playwright install --with-deps chromium
-      - name: Check v5.5 JavaScript syntax
+      - name: Check v5.6 JavaScript syntax
         run: |
           python - <<'PY'
           from pathlib import Path
-          p=Path('POOL_WORLD_5.5_STAGING_MATCH.html')
-          Path('pool55.js').write_text(p.read_text().split('<script>',1)[1].split('</script>',1)[0])
+          p=Path('POOL_WORLD_5.6_STAGING_MATCH.html')
+          Path('pool56.js').write_text(p.read_text().split('<script>',1)[1].split('</script>',1)[0])
           PY
-          node --check pool55.js
+          node --check pool56.js
       - name: Regression and approved sound integrity
-        run: python tests/test_pool55_regression.py
+        run: python tests/test_pool56_regression.py
       - name: Mobile controls, rule edge cases and frame timing
-        run: python tests/test_pool55_quality.py
+        run: python tests/test_pool56_quality.py
       - name: Full natural-layout physical match
-        run: python tests/test_pool55_match.py
+        run: python tests/test_pool56_match.py
       - name: Pocket jaws, cushion rebounds and energy fixtures
-        run: python tests/test_pool55_pockets.py
+        run: python tests/test_pool56_pockets.py
       - name: Three varied full matches and touchscreen ball-in-hand
-        run: python tests/test_pool55_varied_match.py
+        run: python tests/test_pool56_varied_match.py
+      - name: Spin, follow/draw and cushion English measurements
+        run: python tests/test_pool56_spin.py
       - name: Visual canvas pixels and three viewports
-        run: python tests/test_pool55_visual.py
+        run: python tests/test_pool56_visual.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: poolworld-v55-staging-test-results
+          name: poolworld-v56-staging-test-results
           path: |
-            POOL_WORLD_5.5_*RESULTS.json
-            pool55_*.png
+            POOL_WORLD_5.6_*RESULTS.json
+            pool56_*.png
           if-no-files-found: ignore
