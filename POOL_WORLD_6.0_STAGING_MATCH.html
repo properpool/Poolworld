@@ -333,6 +333,50 @@ function constrainRail(b){for(let axis of ['x','y']){let pos=b[axis],lo=axis==='
       const ny=axis==='y'?(pos<lo?1:-1):0;
       reflectCushion(b,nx,ny,.78,.04);}}
 }
+// A cushion-clamped ball has no outward positional freedom. The ordinary
+// equal-share ball separation can push it through a rail; clamping that half
+// of the correction back leaves the two balls interpenetrating. Project the
+// remaining overlap into the available cloth space instead. This is strictly
+// positional: no artificial velocity, spin or sound impulse is introduced.
+function projectRailContactOverlaps(){
+ const active=balls.filter(b=>!b.potted).sort((a,b)=>a.id-b.id);
+ const min=2*rad,loX=L+rad,hiX=R-rad,loY=T+rad,hiY=B-rad;
+ const room=(b,ux,uy)=>{
+  let cap=Infinity;
+  if(ux>1e-10)cap=Math.min(cap,(hiX-b.x)/ux);
+  else if(ux< -1e-10)cap=Math.min(cap,(b.x-loX)/-ux);
+  if(uy>1e-10)cap=Math.min(cap,(hiY-b.y)/uy);
+  else if(uy< -1e-10)cap=Math.min(cap,(b.y-loY)/-uy);
+  return Math.max(0,cap);
+ };
+ // A rail-side chain can transfer penetration to the next neighbour.
+ // Fixed, bounded sweeps avoid dependence on rack storage order.
+ for(let sweep=0;sweep<16;sweep++){
+  let worst=0,changed=false;
+  for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++){
+   const a=active[i],b=active[j],dx=b.x-a.x,dy=b.y-a.y;
+   const d=Math.hypot(dx,dy),overlap=min-d;
+   if(overlap<=.002)continue;
+   worst=Math.max(worst,overlap);
+   let nx,ny;
+   if(d>1e-7){nx=dx/d;ny=dy/d}
+   else{
+    const rvx=b.vx-a.vx,rvy=b.vy-a.vy,v=Math.hypot(rvx,rvy);
+    nx=v>1e-8?-rvx/v:1;ny=v>1e-8?-rvy/v:0;
+   }
+   const capA=room(a,-nx,-ny),capB=room(b,nx,ny);
+   const required=overlap+.002;
+   let moveA=Math.min(required/2,capA);
+   let moveB=Math.min(required-moveA,capB);
+   moveA+=Math.min(required-moveA-moveB,capA-moveA);
+   if(moveA+moveB<1e-8)continue;
+   a.x-=nx*moveA;a.y-=ny*moveA;
+   b.x+=nx*moveB;b.y+=ny*moveB;
+   changed=true;
+  }
+  if(worst<=.01||!changed)break;
+ }
+}
 function physics(dt){const before=balls.map(b=>[b.x,b.y]);const scale=dt*60;for(let bi=0;bi<balls.length;bi++){const b=balls[bi];if(b.potted)continue;const speed=Math.hypot(b.vx,b.vy);if(speed>0){const decel=(.012+.0016*Math.min(speed,4))*scale;const f=Math.max(0,(speed-decel)/speed);b.vx*=f;b.vy*=f;if(speed<.021){b.vx=b.vy=0}const dx=b.vx*scale,dy=b.vy*scale;b.x+=dx;b.y+=dy;// Side-spin (English) changes rail contacts, not the free-flight path of a rolling ball.
       b.spin*=Math.pow(.984,scale);b.follow*=Math.pow(.995,scale)}for(const [hx,hy] of holes){if(Math.hypot(b.x-hx,b.y-hy)<pocket*.74){pocketBall(b);break}}if(b.potted)continue;collideJaw(b);constrainRail(b);
  // Roll the visible sphere by its ACTUAL travel after rail and jaw constraints.
@@ -409,6 +453,7 @@ for(let ci=0;ci<contacts.length;){
  // Contact position correction happens after the first rail pass. Keep
  // rail-side clusters on the cloth in this same 120Hz physics tick.
  for(const b of balls)if(!b.potted)constrainRail(b);
+ if(contacts.length)projectRailContactOverlaps();
 }
 function settled(){return balls.every(b=>b.potted||Math.hypot(b.vx,b.vy)<.022)}
 function frame(t){let elapsed=last?Math.min((t-last)/1000,.045):0;last=t;accumulator+=elapsed;let n=0;while(accumulator>=STEP&&n++<6){if(shooting)physics(STEP);accumulator-=STEP}if(shooting){for(let i=0;i<Math.min(events.length,8);i++){const [kind,v]=events[i];sound(kind,v)}events.length=0;if(settled())resolveShot()}render();requestAnimationFrame(frame)}
