@@ -68,6 +68,7 @@ with sync_playwright() as pw:
             page.keyboard.insert_text('')
             page.evaluate("""() => document.dispatchEvent(new KeyboardEvent('keydown',{code:'Space',repeat:true,bubbles:true,cancelable:true}))""")
             check('desktop repeated Space cannot accidentally shoot',page.evaluate('!shooting'))
+            page.locator('details').evaluate('(el) => {el.open=true}')
             page.locator('#strength').focus()
             before=page.evaluate("() => ({active:document.activeElement?.id,shooting})")
             page.keyboard.press('Space')
