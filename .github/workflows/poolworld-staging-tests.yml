@@ -88,6 +88,8 @@ jobs:
         run: python tests/test_pool60_cluster_stress.py
       - name: Ball-in-hand jaw clearance at all twelve rubber noses (148 checks)
         run: python tests/test_pool60_jaw_placement.py
+      - name: Completed-shot rotational rest and full-turn spin recovery
+        run: python tests/test_pool60_settled_spin.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
