@@ -255,7 +255,11 @@ function pointAim(e){if(shooting||gameOver||ballInHand||balls[0].potted)return;
   aim=aimStartAngle+(e.clientX-aimStartX)*(pi/180)*.13;lastAim=aim;
  }else{
   const p=pointerCoords(e),b=balls[0],a=Math.atan2(p.y-b.y,p.x-b.x);
-  if(Math.hypot(p.x-b.x,p.y-b.y)>rad*2){aim=a;lastAim=a}
+  // A finger landing over the tiny cue ball must not unexpectedly snap the aim.
+  // Use a CSS-pixel touch guard so portrait and landscape feel consistent.
+  const bounds=canvas.getBoundingClientRect();
+  const guard=e.pointerType==='touch'?Math.max(rad*2,20*W/bounds.width):rad*2;
+  if(Math.hypot(p.x-b.x,p.y-b.y)>guard){aim=a;lastAim=a}
  }
 }
 canvas.addEventListener('pointerdown',e=>{if(shooting||gameOver||aimPointer!==null)return;
@@ -264,7 +268,10 @@ canvas.addEventListener('pointerdown',e=>{if(shooting||gameOver||aimPointer!==nu
  if(!precisionAim)pointAim(e)
 });
 canvas.addEventListener('pointermove',e=>{if(dragAim&&e.pointerId===aimPointer)pointAim(e)});
-function finishAim(e){if(e.pointerId!==aimPointer)return;dragAim=false;aimPointer=null}
+function finishAim(e){if(e.pointerId!==aimPointer)return;
+ // An interrupted mobile gesture is not an intentional change of direction.
+ if(e.type==='pointercancel'){aim=aimStartAngle;lastAim=aim}
+ dragAim=false;aimPointer=null}
 canvas.addEventListener('pointerup',finishAim);canvas.addEventListener('pointercancel',finishAim);
 const track=$('track');let powerPointer=null,powerStart=45;
 function showPower(p){power=Math.max(5,Math.min(100,p));$('strength').value=power;$('powerValue').textContent=Math.round(power)+'%';const h=track.clientHeight;const y=(power-5)/95*(h-22)+11;$('handle').style.top=y+'px';$('fill').style.height=y+'px'}
