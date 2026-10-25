@@ -226,7 +226,7 @@ function earliestCueContact(before){
    const bb=2*(sx*dx+sy*dy),disc=bb*bb-4*a*c;
    if(bb<0&&disc>=0)t=(-bb-Math.sqrt(disc))/(2*a);
   }
-  if(t!==null&&t>=0&&t<=1&&(!first||t<first.t-1e-9))
+  if(t!==null&&t>=0&&t<=1&&(!first||t<first.t-1e-9||(Math.abs(t-first.t)<=1e-9&&b.id<first.id)))
    first={id:b.id,t};
  }
  if(first)shot.firstHit=first.id;
@@ -245,7 +245,31 @@ function physics(dt){const before=balls.map(b=>[b.x,b.y]);const scale=dt*60;for(
       const ny=axis==='y'?(pos<lo?1:-1):0;
       reflectCushion(b,nx,ny,.78,.04);}}}
 earliestCueContact(before);
-for(let i=0;i<balls.length;i++){const a=balls[i];if(a.potted)continue;for(let j=i+1;j<balls.length;j++){const b=balls[j];if(b.potted)continue;let dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy,min=rad*2;if(d2>=min*min)continue;let d=Math.sqrt(d2),nx,ny;
+// Resolve overlapping pairs in swept-contact order, not rack array order.
+// This preserves chronological cue/object impulses in a 120Hz physics step
+// and makes a fixed physical layout invariant to object array permutations.
+const contacts=[];
+for(let i=0;i<balls.length;i++){
+ const a=balls[i];if(a.potted)continue;
+ for(let j=i+1;j<balls.length;j++){
+  const b=balls[j];if(b.potted)continue;
+  const ex=b.x-a.x,ey=b.y-a.y,min=2*rad;
+  if(ex*ex+ey*ey>=min*min)continue;
+  const sx=before[j][0]-before[i][0],sy=before[j][1]-before[i][1];
+  const dx=ex-sx,dy=ey-sy,c=sx*sx+sy*sy-min*min;
+  let t=1;
+  if(c<=0)t=0;
+  else{
+   const qa=dx*dx+dy*dy,qb=2*(sx*dx+sy*dy),disc=qb*qb-4*qa*c;
+   if(qa>1e-12&&qb<0&&disc>=0)t=Math.max(0,Math.min(1,(-qb-Math.sqrt(disc))/(2*qa)));
+  }
+  contacts.push({a,b,t});
+ }
+}
+contacts.sort((u,v)=>u.t-v.t||Math.min(u.a.id,u.b.id)-Math.min(v.a.id,v.b.id)||Math.max(u.a.id,u.b.id)-Math.max(v.a.id,v.b.id));
+for(const {a,b} of contacts){
+ if(a.potted||b.potted)continue;
+ let dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy,min=rad*2;if(d2>=min*min)continue;let d=Math.sqrt(d2),nx,ny;
  // An exact centre overlap must separate; use relative motion as a stable normal.
  if(d<1e-6){const rvx=b.vx-a.vx,rvy=b.vy-a.vy,rv=Math.hypot(rvx,rvy);nx=rv>1e-8?-rvx/rv:1;ny=rv>1e-8?-rvy/rv:0;d=0}
  else{nx=dx/d;ny=dy/d}
@@ -275,7 +299,7 @@ for(let i=0;i<balls.length;i++){const a=balls[i];if(a.potted)continue;for(let j=
   const maxKick=Math.max(0,-sign*along+Math.sqrt(along*along+released));
   const kick=sign*Math.min(Math.abs(requested),maxKick);
   a.vx+=fx*kick;a.vy+=fy*kick;a.follow=retained;
- }}}
+ }}
 }
 function settled(){return balls.every(b=>b.potted||Math.hypot(b.vx,b.vy)<.022)}
 function frame(t){let elapsed=last?Math.min((t-last)/1000,.045):0;last=t;accumulator+=elapsed;let n=0;while(accumulator>=STEP&&n++<6){if(shooting)physics(STEP);accumulator-=STEP}if(shooting){for(let i=0;i<Math.min(events.length,8);i++){const [kind,v]=events[i];sound(kind,v)}events.length=0;if(settled())resolveShot()}render();requestAnimationFrame(frame)}
