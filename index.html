@@ -209,7 +209,13 @@ function drawAim(){const c=balls[0],dx=Math.cos(aim),dy=Math.sin(aim);if(guide){
 // Physics: fixed 120Hz steps; translational and rotational impulses bounded.
 const STEP=1/120;let accumulator=0,last=0;
 function physics(dt){const scale=dt*60;for(const b of balls){if(b.potted)continue;const speed=Math.hypot(b.vx,b.vy);if(speed>0){const decel=(.012+.0016*Math.min(speed,4))*scale;const f=Math.max(0,(speed-decel)/speed);b.vx*=f;b.vy*=f;if(speed<.021){b.vx=b.vy=0}const dx=b.vx*scale,dy=b.vy*scale;b.x+=dx;b.y+=dy;rotateRoll(b,dx,dy);// Side-spin (English) changes rail contacts, not the free-flight path of a rolling ball.
-      b.spin*=Math.pow(.984,scale);b.follow*=Math.pow(.995,scale)}for(const [hx,hy] of holes){if(Math.hypot(b.x-hx,b.y-hy)<pocket*.74){pocketBall(b);break}}if(b.potted)continue;collideJaw(b);for(let axis of ['x','y']){let pos=b[axis],lo=axis==='x'?L+rad:T+rad,hi=axis==='x'?R-rad:B-rad;if(pos<lo||pos>hi){const closest=axis==='x'?(pos<lo?L:R):(pos<lo?T:B);const cross=axis==='x'?b.y:b.x;const nearPocket=holes.some(([hx,hy])=>axis==='x'?Math.abs(hx-closest)<1&&Math.abs(hy-cross)<pocket*1.2:Math.abs(hy-closest)<12&&Math.abs(hx-cross)<pocket*1.2);if(nearPocket){if(pos<lo-rad||pos>hi+rad){pocketBall(b)}continue}b[axis]=Math.max(lo,Math.min(hi,pos));const vel=axis==='x'?'vx':'vy';// Inward wall normal. Rail restitution and tangent friction are
+      b.spin*=Math.pow(.984,scale);b.follow*=Math.pow(.995,scale)}for(const [hx,hy] of holes){if(Math.hypot(b.x-hx,b.y-hy)<pocket*.74){pocketBall(b);break}}if(b.potted)continue;collideJaw(b);for(let axis of ['x','y']){let pos=b[axis],lo=axis==='x'?L+rad:T+rad,hi=axis==='x'?R-rad:B-rad;if(pos<lo||pos>hi){const closest=axis==='x'?(pos<lo?L:R):(pos<lo?T:B);const cross=axis==='x'?b.y:b.x;const nearPocket=holes.some(([hx,hy])=>axis==='x'?Math.abs(hx-closest)<1&&Math.abs(hy-cross)<pocket*1.2:Math.abs(hy-closest)<12&&Math.abs(hx-cross)<pocket*1.2);if(nearPocket){
+  // A cushion gap is not a pocket: only the circular pocket-well test
+  // above may remove a ball. Previously any ball crossing the outer rail
+  // within a broad 1.2*pocket mouth band was potted, even when its centre
+  // missed the actual pocket. Rebound an overrun outside the capture well.
+  if(pos>=lo-rad&&pos<=hi+rad)continue;
+ }b[axis]=Math.max(lo,Math.min(hi,pos));const vel=axis==='x'?'vx':'vy';// Inward wall normal. Rail restitution and tangent friction are
       // dissipative even for large English; spin can drive rail throw only
       // by releasing rotational energy already carried by the ball.
       const nx=axis==='x'?(pos<lo?1:-1):0;
