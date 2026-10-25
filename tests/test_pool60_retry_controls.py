@@ -58,12 +58,17 @@ with sync_playwright() as pw:
               restored['spin']==44 and restored['spinSlider']=='44' and restored['follow']==-31 and restored['followSlider']=='-31',restored)
         check(name+' retry leaves SHOOT enabled and clears old history',
               not restored['shooting'] and restored['historyCleared'] and restored['button']=='SHOOT',restored)
-        page.locator('#shoot').click()
-        repeat=page.evaluate("""() => ({
-          shooting,historyPower:history?.power,historySpin:history?.spin,
-          historyFollow:history?.follow,speed:Math.hypot(balls[0].vx,balls[0].vy),
-          expectedSpeed:shotSpeed(68,false)
-        })""")
+        # Dispatch the real button action and sample speed in the same browser
+        # task. Separate Playwright round-trips can allow a 120Hz physics tick
+        # to run before sampling, making a correct shot look underpowered.
+        repeat=page.evaluate("""() => {
+          document.getElementById('shoot').click();
+          return {
+            shooting,historyPower:history?.power,historySpin:history?.spin,
+            historyFollow:history?.follow,speed:Math.hypot(balls[0].vx,balls[0].vy),
+            expectedSpeed:shotSpeed(68,false)
+          };
+        }""")
         check(name+' replay uses the original 68% shot speed and spin',
               repeat['shooting'] and repeat['historyPower']==68 and repeat['historySpin']==44 and
               repeat['historyFollow']==-31 and abs(repeat['speed']-repeat['expectedSpeed'])<1e-10,repeat)
