@@ -82,7 +82,7 @@ let turn=1,groups={1:null,2:null},ballInHand=false,gameOver=false,winner=null,br
 const opponent=p=>p===1?2:1;
 const groupOf=id=>id>=1&&id<=7?'solids':id>=9&&id<=15?'stripes':null;
 const remainingFor=p=>balls.filter(b=>!b.potted&&groupOf(b.id)===groups[p]).length;
-function canPlace(x,y){return Number.isFinite(x)&&Number.isFinite(y)&&x>=L+rad+2&&x<=R-rad-2&&y>=T+rad+2&&y<=B-rad-2&&!holes.some(([hx,hy])=>Math.hypot(x-hx,y-hy)<pocket+rad*.2)&&balls.every(b=>b.id===0||b.potted||Math.hypot(b.x-x,b.y-y)>=2*rad+.5)}
+function canPlace(x,y){return Number.isFinite(x)&&Number.isFinite(y)&&x>=L+rad+2&&x<=R-rad-2&&y>=T+rad+2&&y<=B-rad-2&&!holes.some(([hx,hy])=>Math.hypot(x-hx,y-hy)<pocket+rad*.2)&&jaws.every(([jx,jy])=>Math.hypot(x-jx,y-jy)>=rad+jawRadius+.1)&&balls.every(b=>b.id===0||b.potted||Math.hypot(b.x-x,b.y-y)>=2*rad+.5)}
 function cuePosition(){const x0=L+(R-L)*.24,y0=(T+B)/2;if(canPlace(x0,y0))return [x0,y0];for(let y=T+rad+6;y<=B-rad-6;y+=rad*2.3)for(let x=L+rad+6;x<=R-rad-6;x+=rad*2.3)if(canPlace(x,y))return [x,y];return [x0,y0]}
 function snapshot(){return {balls:balls.map(b=>({...b})),turn,groups:{...groups},ballInHand,gameOver,winner,breakShot,aim,power,spin,follow}}
 function restore(state){balls=state.balls.map(b=>({...b}));turn=state.turn;groups={...state.groups};ballInHand=state.ballInHand;gameOver=state.gameOver;winner=state.winner;breakShot=state.breakShot;aim=state.aim;power=state.power??power;spin=state.spin??spin;follow=state.follow??follow;shooting=false;shot=null;events.length=0;accumulator=0;showPower(power);$('spin').value=spin;$('follow').value=follow;updateHUD()}
