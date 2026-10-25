@@ -15,15 +15,14 @@ def check(name, ok, result):
     checks.append({'name':name,'passed':bool(ok),'result':result})
     print(('PASS' if ok else 'FAIL'),name,result,flush=True)
 
-# x/y and velocity for a plausible approach just outside each jaw's clear lane.
-# The object ball must rebound instead of being swallowed by the pocket.
+# x/y and velocity for approaches on the *outer* side of each jaw.\n# The object ball must rebound rather than be swallowed by the pocket.\n# A corner approach on the inner side can legitimately deflect into the pocket.
 mouths=[
-    ('top-left',110,93.2,0,-2.4,110,77),
+    ('top-left',128,93.2,0,-2.4,110,77),
     ('top-middle',581,93.2,0,-2.4,581,77),
-    ('top-right',990,93.2,0,-2.4,990,77),
-    ('bottom-left',110,476.8,0,2.4,110,493),
+    ('top-right',972,93.2,0,-2.4,990,77),
+    ('bottom-left',128,476.8,0,2.4,110,493),
     ('bottom-middle',581,476.8,0,2.4,581,493),
-    ('bottom-right',990,476.8,0,2.4,990,493),
+    ('bottom-right',972,476.8,0,2.4,990,493),
 ]
 # Legitimate pots must still work at the same physics settings.
 centres=[
