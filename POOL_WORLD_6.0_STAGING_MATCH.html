@@ -269,7 +269,7 @@ function pointAim(e){if(shooting||gameOver||ballInHand||balls[0].potted)return;
   // A finger landing over the tiny cue ball must not unexpectedly snap the aim.
   // Use a CSS-pixel touch guard so portrait and landscape feel consistent.
   const bounds=canvas.getBoundingClientRect();
-  const guard=e.pointerType==='touch'?Math.max(rad*2,20*W/bounds.width):rad*2;
+  const guard=(e.pointerType==='touch'||e.pointerType==='pen')?Math.max(rad*2,20*W/bounds.width):rad*2;
   if(Math.hypot(p.x-b.x,p.y-b.y)>guard){aim=a;lastAim=a}
  }
 }
@@ -311,9 +311,10 @@ function confirmCuePlacement(){
  }
  ballInHand=false;updateHUD();$('status').textContent='Cue ball placed. Aim and press SHOOT.';return true;
 }
-$('shoot').onclick=()=>{if(ballInHand){confirmCuePlacement();return}shoot()};$('reset').onclick=rack;$('undo').onclick=()=>{if(!history)return;restore(history);history=null;$('status').textContent='Previous shot restored, including turns and fouls.'};
+function primaryAction(){if(ballInHand)return confirmCuePlacement();return shoot()}
+$('shoot').onclick=primaryAction;$('reset').onclick=rack;$('undo').onclick=()=>{if(!history)return;restore(history);history=null;$('status').textContent='Previous shot restored, including turns and fouls.'};
 $('guide').onclick=()=>{guide=!guide;$('guide').textContent='GUIDE: '+(guide?'ON':'OFF')};$('sound').onclick=()=>{soundOn=!soundOn;$('sound').textContent=soundOn?'🔊':'🔇'};
 $('strength').oninput=e=>showPower(+e.target.value);$('spin').oninput=e=>spin=+e.target.value;$('follow').oninput=e=>follow=+e.target.value;
-window.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'){e.preventDefault();shoot()}if(e.code==='ArrowLeft'){aim-=.01;e.preventDefault()}if(e.code==='ArrowRight'){aim+=.01;e.preventDefault()}});
+window.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'){e.preventDefault();if(!e.repeat)primaryAction()}if(e.code==='ArrowLeft'){aim-=.01;e.preventDefault()}if(e.code==='ArrowRight'){aim+=.01;e.preventDefault()}});
 rack();showPower(45);requestAnimationFrame(frame);
 </script></body></html>
