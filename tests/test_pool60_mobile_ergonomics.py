@@ -11,7 +11,7 @@ def check(name,passed,details=None):
 def touch(s,kind,x,y):
  s.send('Input.dispatchTouchEvent',{'type':kind,'touchPoints':[] if kind=='touchEnd' else [{'x':x,'y':y,'id':1}]})
 with sync_playwright() as p:
- b=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+ b=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else None,args=['--no-sandbox'])
  for w,h in [(844,390),(915,412),(812,375),(740,360),(667,375),(568,320),(390,844),(360,740)]:
   page=b.new_page(viewport={'width':w,'height':h},is_mobile=True,has_touch=True,device_scale_factor=2)
   errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
