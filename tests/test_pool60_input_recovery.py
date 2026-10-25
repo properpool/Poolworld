@@ -69,8 +69,10 @@ with sync_playwright() as pw:
             page.evaluate("""() => document.dispatchEvent(new KeyboardEvent('keydown',{code:'Space',repeat:true,bubbles:true,cancelable:true}))""")
             check('desktop repeated Space cannot accidentally shoot',page.evaluate('!shooting'))
             page.locator('#strength').focus()
+            before=page.evaluate("() => ({active:document.activeElement?.id,shooting})")
             page.keyboard.press('Space')
-            check('desktop slider focus blocks gameplay Space',page.evaluate('!shooting'))
+            after=page.evaluate("() => ({active:document.activeElement?.id,shooting})")
+            check('desktop slider focus blocks gameplay Space',not after['shooting'],{'before':before,'after':after})
         if width==768:
             for delta in (10,18):
                 data=page.evaluate("""(delta)=>{
