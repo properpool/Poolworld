@@ -90,6 +90,8 @@ jobs:
         run: python tests/test_pool60_jaw_placement.py
       - name: Completed-shot rotational rest and full-turn spin recovery
         run: python tests/test_pool60_settled_spin.py
+      - name: Round pool balls and accurate touch geometry on five viewports (35 checks)
+        run: python tests/test_pool60_canvas_aspect.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
