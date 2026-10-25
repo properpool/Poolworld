@@ -504,9 +504,12 @@ canvas.addEventListener('pointerdown',e=>{if(shooting||gameOver||aimPointer!==nu
 canvas.addEventListener('pointermove',e=>{if(dragAim&&e.pointerId===aimPointer)pointAim(e)});
 function finishAim(e){if(e.pointerId!==aimPointer)return;
  // An interrupted mobile gesture is not an intentional change of direction.
- if(e.type==='pointercancel'){aim=aimStartAngle;lastAim=aim}
+ if(e.type==='pointercancel'||e.type==='lostpointercapture'){aim=aimStartAngle;lastAim=aim}
  dragAim=false;aimPointer=null;aimFineDrag=false}
 canvas.addEventListener('pointerup',finishAim);canvas.addEventListener('pointercancel',finishAim);
+// The OS/browser may revoke capture without a pointerup on the table.
+// Treat that as an interrupted gesture, restoring aim and unlocking touch.
+canvas.addEventListener('lostpointercapture',finishAim);
 const track=$('track');let powerPointer=null,powerStart=45;
 function showPower(p){power=Math.max(5,Math.min(100,p));$('strength').value=power;$('powerValue').textContent=Math.round(power)+'%';const h=track.clientHeight;const y=(power-5)/95*(h-22)+11;$('handle').style.top=y+'px';$('fill').style.height=y+'px'}
 function padStart(e){if(shooting||gameOver||ballInHand||powerDrag)return;e.preventDefault();powerDrag=true;powerPointer=e.pointerId;powerY=e.clientY;powerStart=power;track.setPointerCapture(e.pointerId);const r=track.getBoundingClientRect();showPower(5+(e.clientY-r.top)/r.height*95)}
@@ -515,10 +518,13 @@ function padEnd(e){if(!powerDrag||e.pointerId!==powerPointer)return;powerDrag=fa
  // A tap changes power. Require a substantial pull before auto-shooting:
  // a 12px finger wobble on a short Samsung landscape slider was unsafe.
  // Cancelled gestures restore the pre-drag setting and never fire.
- if(e.type==='pointercancel'){showPower(powerStart);return}
+ if(e.type==='pointercancel'||e.type==='lostpointercapture'){showPower(powerStart);return}
  if(e.type==='pointerup'&&e.clientY-powerY>=Math.max(18,Math.min(28,track.clientHeight*.24))){if(shoot())showPower(45)}
 }
 track.addEventListener('pointerdown',padStart);track.addEventListener('pointermove',padMove);track.addEventListener('pointerup',padEnd);track.addEventListener('pointercancel',padEnd);
+// Releasing pointer capture unexpectedly must never leave the slider stuck
+// or trigger a shot; a completed pointerup has already cleared powerDrag.
+track.addEventListener('lostpointercapture',padEnd);
 function fineAim(direction){if(shooting||gameOver||ballInHand)return;aim+=direction*pi/360;lastAim=aim;render()}
 $('aimLeft').onclick=()=>fineAim(-1);$('aimRight').onclick=()=>fineAim(1);
 $('precision').onclick=()=>{precisionAim=!precisionAim;$('precision').textContent='PRECISION: '+(precisionAim?'ON':'OFF');$('precision').setAttribute('aria-pressed',String(precisionAim))};
