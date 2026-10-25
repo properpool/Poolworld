@@ -351,7 +351,10 @@ function projectRailContactOverlaps(){
  };
  // A rail-side chain can transfer penetration to the next neighbour.
  // Fixed, bounded sweeps avoid dependence on rack storage order.
- for(let sweep=0;sweep<16;sweep++){
+ // Dense six-ball rail-side chains need additional convergence sweeps.
+ // Stop early once residual penetration is under 0.01 table units;
+ // the projection is positional only and cannot add kinetic energy.
+ for(let sweep=0;sweep<64;sweep++){
   let worst=0,changed=false;
   for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++){
    const a=active[i],b=active[j],dx=b.x-a.x,dy=b.y-a.y;
