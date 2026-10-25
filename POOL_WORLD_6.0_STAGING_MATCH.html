@@ -258,11 +258,18 @@ function shotSpeed(level,isBreak=breakShot){
 }
 function shoot(){if(shooting||gameOver||ballInHand||balls[0].potted)return false;history=snapshot();shot={player:turn,breakShot,firstHit:null,railAfterContact:false,pocketed:[],scratch:false,targetEight:groups[turn]!==null&&remainingFor(turn)===0};const b=balls[0],speed=shotSpeed(power,breakShot);b.vx=Math.cos(aim)*speed;b.vy=Math.sin(aim)*speed;b.spin=spin/100*1.2;b.follow=follow/100*2.5;shooting=true;events.length=0;sound('cue',Math.max(.3,power/90));updateHUD();$('status').textContent='Shot in progress…';return true}
 function pointerCoords(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
-let lastAim=aim,precisionAim=false,aimPointer=null,aimStartX=0,aimStartAngle=0;
+let lastAim=aim,precisionAim=false,aimPointer=null,aimStartX=0,aimStartAngle=0,aimFineDrag=false;
+function nearCueTouch(e){
+ if(e.pointerType!=='touch'&&e.pointerType!=='pen')return false;
+ const p=pointerCoords(e),b=balls[0],bounds=canvas.getBoundingClientRect();
+ const guard=Math.max(rad*2,20*W/bounds.width);
+ return Math.hypot(p.x-b.x,p.y-b.y)<=guard;
+}
 function pointAim(e){if(shooting||gameOver||ballInHand||balls[0].potted)return;
- if(precisionAim){
-  // Screen-pixel displacement gives stable fine control at any canvas scale.
-  // A new touch never snaps the cue direction to the finger location.
+ if(precisionAim||aimFineDrag){
+  // A touch beginning on the cue ball remains a relative fine-aim drag
+  // throughout the gesture, even after the finger crosses the touch guard.
+  // This prevents a sudden cue-angle jump on small phone screens.
   aim=aimStartAngle+(e.clientX-aimStartX)*(pi/180)*.13;lastAim=aim;
  }else{
   const p=pointerCoords(e),b=balls[0],a=Math.atan2(p.y-b.y,p.x-b.x);
@@ -275,14 +282,15 @@ function pointAim(e){if(shooting||gameOver||ballInHand||balls[0].potted)return;
 }
 canvas.addEventListener('pointerdown',e=>{if(shooting||gameOver||aimPointer!==null)return;
  if(ballInHand){const p=pointerCoords(e);if(canPlace(p.x,p.y)){balls[0].x=p.x;balls[0].y=p.y;ballInHand=false;updateHUD();$('status').textContent='Cue ball placed. Aim and shoot.'}else{$('status').textContent='Invalid placement — keep the cue ball inside the cloth and clear of other balls.'}return}
- aimPointer=e.pointerId;dragAim=true;aimStartX=e.clientX;aimStartAngle=aim;canvas.setPointerCapture(e.pointerId);
- if(!precisionAim)pointAim(e)
+ aimPointer=e.pointerId;dragAim=true;aimStartX=e.clientX;aimStartAngle=aim;
+ aimFineDrag=nearCueTouch(e);canvas.setPointerCapture(e.pointerId);
+ if(!precisionAim&&!aimFineDrag)pointAim(e)
 });
 canvas.addEventListener('pointermove',e=>{if(dragAim&&e.pointerId===aimPointer)pointAim(e)});
 function finishAim(e){if(e.pointerId!==aimPointer)return;
  // An interrupted mobile gesture is not an intentional change of direction.
  if(e.type==='pointercancel'){aim=aimStartAngle;lastAim=aim}
- dragAim=false;aimPointer=null}
+ dragAim=false;aimPointer=null;aimFineDrag=false}
 canvas.addEventListener('pointerup',finishAim);canvas.addEventListener('pointercancel',finishAim);
 const track=$('track');let powerPointer=null,powerStart=45;
 function showPower(p){power=Math.max(5,Math.min(100,p));$('strength').value=power;$('powerValue').textContent=Math.round(power)+'%';const h=track.clientHeight;const y=(power-5)/95*(h-22)+11;$('handle').style.top=y+'px';$('fill').style.height=y+'px'}
