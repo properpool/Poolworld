@@ -45,6 +45,6 @@ for sound,digest in AUDIO_HASHES.items():
  got=hashlib.sha256(c.group(1).encode()).hexdigest()[:20] if c else None
  check(f'approved {sound} sound byte-identical',got==digest,got)
 summary={'passed':sum(c['passed'] for c in checks),'total':len(checks),'checks':checks,'limits':'Automated Chromium touch emulation; physical Samsung and independent human acceptance not performed.'}
-(ROOT/'POOL_WORLD_6.1_MOBILE_ACCEPTANCE_RESULTS.json').write_text(json.dumps(summary,indent=2))
+(ROOT/'POOL_WORLD_6.0_MOBILE_ERGONOMICS_RESULTS.json').write_text(json.dumps(summary,indent=2))
 print('SUMMARY',summary['passed'],'/',summary['total'])
 if summary['passed']!=summary['total']:sys.exit(1)
