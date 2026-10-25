@@ -354,7 +354,12 @@ for(let i=0;i<balls.length;i++){
 contacts.sort((u,v)=>u.t-v.t||Math.min(u.a.id,u.b.id)-Math.min(v.a.id,v.b.id)||Math.max(u.a.id,u.b.id)-Math.max(v.a.id,v.b.id));
 for(let ci=0;ci<contacts.length;){
  const current=contacts[ci];let end=ci+1;
- while(end<contacts.length&&Math.abs(contacts[end].t-current.t)<1e-7)end++;
+ // Real ball contact lasts a finite interval, not a mathematical instant.
+ // At 120Hz, 0.012 of a step is 0.10ms: resolve almost-coincident
+ // impacts from a tight cluster using the coupled solver rather than
+ // letting a tiny finger-angle or rack-offset difference arbitrarily
+ // choose the first impulse. Wider-separated impacts remain sequential.
+ while(end<contacts.length&&Math.abs(contacts[end].t-current.t)<.012)end++;
  if(end-ci>1&&resolveSimultaneousContacts(contacts.slice(ci,end))){ci=end;continue}
  ci++;
  const {a,b}=current;
