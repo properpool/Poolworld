@@ -231,6 +231,91 @@ function earliestCueContact(before){
  }
  if(first)shot.firstHit=first.id;
 }
+// A genuinely simultaneous contact group must be solved together. Applying
+// each impulse in sequence produces a visibly asymmetric split when a cue
+// strikes two equidistant balls. Projected, damped Jacobi solves the coupled
+// normal constraints from ONE pre-impact velocity state. Only contacts with
+// matching swept times enter this path; ordinary single hits retain the
+// established restitution and spin response below.
+function resolveSimultaneousContacts(batch){
+ const pairs=[];
+ for(const {a,b} of batch){
+  if(a.potted||b.potted)continue;
+  const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),min=2*rad;
+  if(d>=min)continue;
+  let nx,ny;
+  if(d<1e-7){
+   const rx=b.vx-a.vx,ry=b.vy-a.vy,len=Math.hypot(rx,ry);
+   nx=len>1e-8?-rx/len:1;ny=len>1e-8?-ry/len:0;
+  }else{nx=dx/d;ny=dy/d}
+  const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
+  if(rel<0)pairs.push({a,b,nx,ny,rel,overlap:min-d});
+ }
+ if(pairs.length<2)return false;
+ const members=[...new Set(pairs.flatMap(p=>[p.a,p.b]))];
+ const kinetic=()=>members.reduce((sum,b)=>sum+b.vx*b.vx+b.vy*b.vy+.4*(b.spin*b.spin+b.follow*b.follow),0);
+ const beforeEnergy=kinetic();
+ const incomingCue=members.find(b=>b.id===0);
+ const cueV=incomingCue?[incomingCue.vx,incomingCue.vy]:null;
+ // Jacobian coupling: shared balls affect both collision constraints.
+ const influence=(p,q)=>{
+  const sign=(p.b===q.b?1:0)-(p.b===q.a?1:0)-(p.a===q.b?1:0)+(p.a===q.a?1:0);
+  return sign*(p.nx*q.nx+p.ny*q.ny);
+ };
+ let impulses=pairs.map(()=>0);
+ for(let iter=0;iter<32;iter++){
+  const next=impulses.map((j,i)=>{
+   let other=0;
+   for(let k=0;k<pairs.length;k++)if(k!==i)other+=influence(pairs[i],pairs[k])*impulses[k];
+   const desired=Math.max(0,(-(1+.955)*pairs[i].rel-other)/2);
+   return .55*j+.45*desired;
+  });
+  impulses=next;
+ }
+ // Accumulate both positional and normal velocity changes before applying any.
+ const change=new Map(members.map(b=>[b,{x:0,y:0,vx:0,vy:0,spin:0}]));
+ for(let i=0;i<pairs.length;i++){
+  const p=pairs[i],j=impulses[i],ca=change.get(p.a),cb=change.get(p.b);
+  ca.vx-=j*p.nx;ca.vy-=j*p.ny;cb.vx+=j*p.nx;cb.vy+=j*p.ny;
+  const push=p.overlap*.51;
+  ca.x-=push*p.nx;ca.y-=push*p.ny;cb.x+=push*p.nx;cb.y+=push*p.ny;
+  if(Math.abs(p.rel)>.11)events.push(['ball',Math.abs(p.rel)/5]);
+ }
+ for(const b of members){const c=change.get(b);b.vx+=c.vx;b.vy+=c.vy;b.x+=c.x;b.y+=c.y}
+ // Tangential impulses are also sampled simultaneously, preserving symmetry.
+ const tangents=new Map(members.map(b=>[b,{vx:0,vy:0,spin:0}]));
+ for(let i=0;i<pairs.length;i++){
+  const p=pairs[i],tx=-p.ny,ty=p.nx;
+  const slip=(p.b.vx-p.a.vx)*tx+(p.b.vy-p.a.vy)*ty-p.a.spin-p.b.spin;
+  const cap=.08*impulses[i],j=Math.max(-cap,Math.min(cap,-slip/7));
+  const ca=tangents.get(p.a),cb=tangents.get(p.b);
+  ca.vx-=j*tx;ca.vy-=j*ty;cb.vx+=j*tx;cb.vy+=j*ty;
+  ca.spin-=2.5*j;cb.spin-=2.5*j;
+ }
+ for(const b of members){const c=tangents.get(b);b.vx+=c.vx;b.vy+=c.vy;b.spin+=c.spin}
+ // Follow/draw is spent once for the cue, not once per touching object.
+ if(incomingCue&&Math.abs(incomingCue.follow)>.1){
+  const previous=incomingCue.follow,retained=previous*.32;
+  const speed=Math.hypot(...cueV),fx=speed>1e-8?cueV[0]/speed:1,fy=speed>1e-8?cueV[1]/speed:0;
+  const requested=Math.max(-.95,Math.min(.95,previous*.36)),sign=Math.sign(requested);
+  const along=incomingCue.vx*fx+incomingCue.vy*fy;
+  const released=.4*(previous*previous-retained*retained);
+  const maxKick=Math.max(0,-sign*along+Math.sqrt(along*along+released));
+  const kick=sign*Math.min(Math.abs(requested),maxKick);
+  incomingCue.vx+=fx*kick;incomingCue.vy+=fy*kick;incomingCue.follow=retained;
+ }
+ // A multi-contact approximation must never manufacture kinetic energy.
+ const afterEnergy=kinetic();
+ if(afterEnergy>beforeEnergy+1e-9&&afterEnergy>0){
+  const ratio=Math.sqrt(beforeEnergy/afterEnergy);
+  for(const b of members){b.vx*=ratio;b.vy*=ratio;b.spin*=ratio;b.follow*=ratio}
+ }
+ if(shot&&shot.firstHit===null){
+  const cueHits=pairs.filter(p=>p.a.id===0||p.b.id===0).map(p=>p.a.id===0?p.b.id:p.a.id);
+  if(cueHits.length)shot.firstHit=Math.min(...cueHits);
+ }
+ return true;
+}
 function physics(dt){const before=balls.map(b=>[b.x,b.y]);const scale=dt*60;for(const b of balls){if(b.potted)continue;const speed=Math.hypot(b.vx,b.vy);if(speed>0){const decel=(.012+.0016*Math.min(speed,4))*scale;const f=Math.max(0,(speed-decel)/speed);b.vx*=f;b.vy*=f;if(speed<.021){b.vx=b.vy=0}const dx=b.vx*scale,dy=b.vy*scale;b.x+=dx;b.y+=dy;rotateRoll(b,dx,dy);// Side-spin (English) changes rail contacts, not the free-flight path of a rolling ball.
       b.spin*=Math.pow(.984,scale);b.follow*=Math.pow(.995,scale)}for(const [hx,hy] of holes){if(Math.hypot(b.x-hx,b.y-hy)<pocket*.74){pocketBall(b);break}}if(b.potted)continue;collideJaw(b);for(let axis of ['x','y']){let pos=b[axis],lo=axis==='x'?L+rad:T+rad,hi=axis==='x'?R-rad:B-rad;if(pos<lo||pos>hi){const closest=axis==='x'?(pos<lo?L:R):(pos<lo?T:B);const cross=axis==='x'?b.y:b.x;const nearPocket=holes.some(([hx,hy])=>axis==='x'?Math.abs(hx-closest)<1&&Math.abs(hy-cross)<pocket*1.2:Math.abs(hy-closest)<12&&Math.abs(hx-cross)<pocket*1.2);if(nearPocket){
   // A cushion gap is not a pocket: only the circular pocket-well test
@@ -267,7 +352,12 @@ for(let i=0;i<balls.length;i++){
  }
 }
 contacts.sort((u,v)=>u.t-v.t||Math.min(u.a.id,u.b.id)-Math.min(v.a.id,v.b.id)||Math.max(u.a.id,u.b.id)-Math.max(v.a.id,v.b.id));
-for(const {a,b} of contacts){
+for(let ci=0;ci<contacts.length;){
+ const current=contacts[ci];let end=ci+1;
+ while(end<contacts.length&&Math.abs(contacts[end].t-current.t)<1e-7)end++;
+ if(end-ci>1&&resolveSimultaneousContacts(contacts.slice(ci,end))){ci=end;continue}
+ ci++;
+ const {a,b}=current;
  if(a.potted||b.potted)continue;
  let dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy,min=rad*2;if(d2>=min*min)continue;let d=Math.sqrt(d2),nx,ny;
  // An exact centre overlap must separate; use relative motion as a stable normal.
