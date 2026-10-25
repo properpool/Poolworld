@@ -41,7 +41,7 @@ html=SOURCE.read_text()
 # Approved sound payload literals remain untouched from the source baseline.
 AUDIO_HASHES={'ball':'6e0440053e5859b48fa1','cue':'7e2b39137a6de6afd751','rail':'e405df7c5c3c3937a6e2','pocket':'6931e106287f67f9b771'}
 for sound,digest in AUDIO_HASHES.items():
- c=re.search(r'\\b'+sound+r':"(data:audio/[^" ]+)"',html)
+ c=re.search(r'\b'+sound+r':"(data:audio/[^" ]+)"',html)
  got=hashlib.sha256(c.group(1).encode()).hexdigest()[:20] if c else None
  check(f'approved {sound} sound byte-identical',got==digest,got)
 summary={'passed':sum(c['passed'] for c in checks),'total':len(checks),'checks':checks,'limits':'Automated Chromium touch emulation; physical Samsung and independent human acceptance not performed.'}
