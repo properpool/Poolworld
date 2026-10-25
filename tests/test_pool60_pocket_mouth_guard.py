@@ -15,7 +15,9 @@ def check(name, ok, result):
     checks.append({'name':name,'passed':bool(ok),'result':result})
     print(('PASS' if ok else 'FAIL'),name,result,flush=True)
 
-# x/y and velocity for approaches on the *outer* side of each jaw.\n# The object ball must rebound rather than be swallowed by the pocket.\n# A corner approach on the inner side can legitimately deflect into the pocket.
+# x/y and velocity for approaches on the *outer* side of each jaw.
+# The object ball must rebound rather than be swallowed by the pocket.
+# A corner approach on the inner side can legitimately deflect into the pocket.
 mouths=[
     ('top-left',128,93.2,0,-2.4,110,77),
     ('top-middle',581,93.2,0,-2.4,581,77),
