@@ -16,12 +16,13 @@
 const canvas=document.getElementById("table"),ctx=canvas.getContext("2d"),$=id=>document.getElementById(id);
 const W=1100,H=570, L=79,R=1021,T=78,B=492,rad=12.2, pocket=27, pi=Math.PI;
 const holes=[[L,T],[W/2,T-8],[R,T],[L,B],[W/2,B+8],[R,B]];
-// Rounded pocket jaws: fixed rubber noses at the ends of each cushion segment.
+// Rounded pocket jaws: physically wider corner mouths reduce false rejections of near-centre shots.
+// Side pockets retain their prior width; visual cushion endpoints share these exact coordinates.
 // Coordinates remain in table space; collision impulses cannot create energy.
-const jawRadius=7, mouth=pocket*1.25;
+const jawRadius=7, mouth=pocket*1.25, cornerMouth=42;
 const jaws=[
-  ...[T,B].flatMap(y=>[[L+mouth,y],[W/2-mouth,y],[W/2+mouth,y],[R-mouth,y]]),
-  ...[L,R].flatMap(x=>[[x,T+mouth],[x,B-mouth]])
+  ...[T,B].flatMap(y=>[[L+cornerMouth,y],[W/2-mouth,y],[W/2+mouth,y],[R-cornerMouth,y]]),
+  ...[L,R].flatMap(x=>[[x,T+cornerMouth],[x,B-cornerMouth]])
 ];
 // Fixed cushion/jaw contact with a dissipative rigid-sphere impulse.
 // Ball mass=1, moment of inertia I=.4*m*r^2. Spin is omega*r.
@@ -111,15 +112,15 @@ function premiumFinish(c){
  const rail=c.createLinearGradient(0,T-7,0,T+7);
  rail.addColorStop(0,'#062b27');rail.addColorStop(.45,'#0e6550');rail.addColorStop(1,'#043a32');
  c.strokeStyle=rail;c.lineWidth=10;c.lineCap='round';
- for(const y of [T,B])for(const [x1,x2] of [[L+mouth,W/2-mouth],[W/2+mouth,R-mouth]]){
+ for(const y of [T,B])for(const [x1,x2] of [[L+cornerMouth,W/2-mouth],[W/2+mouth,R-cornerMouth]]){
   c.beginPath();c.moveTo(x1,y);c.lineTo(x2,y);c.stroke();
  }
- for(const x of [L,R]){c.beginPath();c.moveTo(x,T+mouth);c.lineTo(x,B-mouth);c.stroke()}
+ for(const x of [L,R]){c.beginPath();c.moveTo(x,T+cornerMouth);c.lineTo(x,B-cornerMouth);c.stroke()}
  c.strokeStyle='#9ed1a33a';c.lineWidth=1.6;
- for(const y of [T,B])for(const [x1,x2] of [[L+mouth,W/2-mouth],[W/2+mouth,R-mouth]]){
+ for(const y of [T,B])for(const [x1,x2] of [[L+cornerMouth,W/2-mouth],[W/2+mouth,R-cornerMouth]]){
   c.beginPath();c.moveTo(x1,y+(y===T?5:-5));c.lineTo(x2,y+(y===T?5:-5));c.stroke();
  }
- for(const x of [L,R]){c.beginPath();c.moveTo(x+(x===L?5:-5),T+mouth);c.lineTo(x+(x===L?5:-5),B-mouth);c.stroke()}
+ for(const x of [L,R]){c.beginPath();c.moveTo(x+(x===L?5:-5),T+cornerMouth);c.lineTo(x+(x===L?5:-5),B-cornerMouth);c.stroke()}
  // Deep leather pockets; centre remains dark and matches the physics hole centre.
  for(const [x,y] of holes){
   c.beginPath();c.arc(x,y,pocket+1,0,pi*2);c.fillStyle='#7e5333';c.fill();
