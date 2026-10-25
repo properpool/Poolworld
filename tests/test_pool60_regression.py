@@ -33,7 +33,7 @@ with sync_playwright() as p:
     check('break contacts object ball and settles',phys['stopped'] and phys['firstHit'] is not None and phys['steps']<2500,phys)
     # Cue scratch + ball-in-hand, and valid/invalid placement through actual mobile canvas taps.
     page.evaluate('''() => {rack();breakShot=false;groups={1:'solids',2:'stripes'};history=snapshot();shot={player:1,breakShot:false,firstHit:1,railAfterContact:true,pocketed:[0],scratch:true};balls[0].potted=true;resolveShot()}''')
-    check('scratch awards ball in hand to opponent',page.evaluate('() => ballInHand && turn===2 && !balls[0].potted && document.getElementById("shoot").disabled'))
+    check('scratch awards ball in hand to opponent',page.evaluate('() => ballInHand && turn===2 && !balls[0].potted && !document.getElementById("shoot").disabled && document.getElementById("shoot").textContent==="PLACE CUE" && shoot()===false'))
     initial=page.evaluate('() => ({x:balls[0].x,y:balls[0].y})')
     box=page.locator('#table').bounding_box()
     # Tapping a ball's occupied location must not accept invalid placement.
