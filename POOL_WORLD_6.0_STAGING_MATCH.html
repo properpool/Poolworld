@@ -544,7 +544,7 @@ function padEnd(e){if(!powerDrag||e.pointerId!==powerPointer)return;
  powerDrag=false;powerPointer=null;
  if(e.type==='pointercancel'||e.type==='lostpointercapture'){showPower(prior);return}
  if(e.type==='pointerup'){
-  if(Math.abs(dy)<=5){const r=track.getBoundingClientRect();showPower(5+(e.clientY-r.top)/r.height*95);return}
+  if(Math.abs(dy)<=5){if(Math.abs(power-prior)<=.5){const r=track.getBoundingClientRect();showPower(5+(e.clientY-r.top)/r.height*95)}return}
   // Small pulls adjust power without unexpectedly releasing a weak shot.
   // SHOOT remains available for any chosen finesse strength.
   if(dy>=Math.max(42,track.clientHeight*.4)){if(shoot())showPower(45)}
