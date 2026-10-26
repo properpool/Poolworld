@@ -336,7 +336,12 @@ function earliestCueContact(before){
   const dx=(b.x-before[i][0])-cx,dy=(b.y-before[i][1])-cy;
   const a=dx*dx+dy*dy,c=sx*sx+sy*sy-(2*rad)**2;
   let t=null;
-  if(c<=0)t=0;
+  // A pre-existing tolerance overlap does not prove a new collision.
+  // Only the actual impulse solver may award first hit for already-touching
+  // balls. A separating or nearly tangential path can enter/exit the tiny
+  // tolerance without ever exchanging momentum; calling that a hit would
+  // falsely legalise a shot and hide its true first object contact.
+  if(c<=0)continue;
   else if(a>1e-12){
    const bb=2*(sx*dx+sy*dy),disc=bb*bb-4*a*c;
    if(bb<0&&disc>=0)t=(-bb-Math.sqrt(disc))/(2*a);
