@@ -27,24 +27,38 @@ with sync_playwright() as pw:
    proto.createLinearGradient=function(...args){perf.linear++;return linear.apply(this,args)};
    const orig=render;
    render=function(){const t=performance.now();orig();perf.draws++;perf.times.push(performance.now()-t)};
+   window.alloc={ballSnapshotMaps:0,quatMaps:0};
+   const nativeMap=Array.prototype.map;
+   Array.prototype.map=function(...args){
+    if(this===balls)alloc.ballSnapshotMaps++;
+    if(this.length===4 && typeof this[0]==='number' && typeof this[1]==='number')alloc.quatMaps++;
+    return nativeMap.apply(this,args);
+   };
    last=0;accumulator=0;
   }""")
   # Full-rack shot: exercise visible 16-ball drawing over 48 frames.
   shot=page.evaluate("""() => {
    showPower(100);aim=0;shoot();
+   const cueRollQ=balls[0].rollQ;
    for(let i=1;i<=48;i++)frame(1000+i*1000/60);
    const times=perf.times.slice().sort((a,b)=>a-b);
    const p=q=>times[Math.min(times.length-1,Math.floor(q*(times.length-1)))];
    return {radial:perf.radial,linear:perf.linear,draws:perf.draws,
            p50:p(.5),p95:p(.95),p99:p(.99),totalMs:perf.times.reduce((a,b)=>a+b,0),
            moved:balls.some(b=>b.id>0&&Math.hypot(b.vx,b.vy)>.02),
-           ballCount:balls.filter(b=>!b.potted).length};
+           ballCount:balls.filter(b=>!b.potted).length,
+           ballSnapshotMaps:alloc.ballSnapshotMaps,quatMaps:alloc.quatMaps,
+           stableRollQ:balls[0].rollQ===cueRollQ,
+           qNorm:Math.hypot(...balls[0].rollQ)};
   }""")
   label=f'{w}x{h}'
   check(label+' moving full rack draws every frame',shot['draws']==48,shot)
   check(label+' full-rack balls receive impulse',shot['moved'],shot)
   check(label+' zero runtime radial gradient allocation',shot['radial']==0,shot)
   check(label+' zero runtime linear gradient allocation',shot['linear']==0,shot)
+  check(label+' no per-tick rack snapshot map allocation',shot['ballSnapshotMaps']==0,shot)
+  check(label+' no per-tick rolling quaternion map allocation',shot['quatMaps']==0,shot)
+  check(label+' rolling quaternion reused and normalized',shot['stableRollQ'] and abs(shot['qNorm']-1)<1e-5,shot)
   check(label+' finite measured render p95',0<=shot['p95']<100 and shot['p99']>=shot['p95'],shot)
   # Draw a moving stripe and confirm the actual canvas contains an opaque,
   # coloured ball away from the table cloth.
@@ -55,6 +69,13 @@ with sync_playwright() as pw:
    return [...ctx.getImageData(x,y,1,1).data];
   }""")
   check(label+' rendered stripe remains opaque',pix is not None and pix[3]==255,pix)
+  isolation=page.evaluate("""() => {
+   const state=snapshot(),b=balls[0],old=state.balls[0].rollQ.slice();
+   rotateRoll(b,5,2);
+   return {independent:state.balls[0].rollQ!==b.rollQ,
+           preserved:old.every((v,i)=>Math.abs(v-state.balls[0].rollQ[i])<1e-12)};
+  }""")
+  check(label+' shot snapshot preserves rolling orientation independently',isolation['independent'] and isolation['preserved'],isolation)
   # Actual mouse pointer aim should affect the next rendered frame.
   page.evaluate("""() => {rack();perf.draws=0;perf.times=[];frame(2000)}""")
   box=page.locator('#table').bounding_box()
