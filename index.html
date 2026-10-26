@@ -529,11 +529,13 @@ canvas.addEventListener('pointerup',finishAim);canvas.addEventListener('pointerc
 // The OS/browser may revoke capture without a pointerup on the table.
 // Treat that as an interrupted gesture, restoring aim and unlocking touch.
 canvas.addEventListener('lostpointercapture',finishAim);
-const track=$('track');let powerPointer=null,powerStart=45;
+const track=$('track');let powerPointer=null,powerStart=45,powerMoved=false;
 function showPower(p){power=Math.max(5,Math.min(100,p));$('strength').value=power;$('powerValue').textContent=Math.round(power)+'%';const h=track.clientHeight;const y=(power-5)/95*(h-22)+11;$('handle').style.top=y+'px';$('fill').style.height=y+'px'}
-function padStart(e){if(shooting||gameOver||ballInHand||powerDrag)return;e.preventDefault();powerDrag=true;powerPointer=e.pointerId;powerY=e.clientY;powerStart=power;track.setPointerCapture(e.pointerId)}
+function padStart(e){if(shooting||gameOver||ballInHand||powerDrag)return;e.preventDefault();powerDrag=true;powerPointer=e.pointerId;powerY=e.clientY;powerStart=power;powerMoved=false;track.setPointerCapture(e.pointerId)}
 function padMove(e){if(!powerDrag||e.pointerId!==powerPointer)return;e.preventDefault();
  const dy=e.clientY-powerY,r=track.getBoundingClientRect();
+ if(Math.abs(dy)>5)powerMoved=true;
+ if(Math.abs(dy)<=5&&powerMoved){showPower(powerStart);return}
  // Pullback strength is relative to the initial finger position.
  // An absolute screen Y previously fired unexpectedly weak short pulls.
  if(dy>5)showPower(5+95*Math.min(1,dy/Math.max(65,r.height*.65)));
@@ -544,7 +546,17 @@ function padEnd(e){if(!powerDrag||e.pointerId!==powerPointer)return;
  powerDrag=false;powerPointer=null;
  if(e.type==='pointercancel'||e.type==='lostpointercapture'){showPower(prior);return}
  if(e.type==='pointerup'){
-  if(Math.abs(dy)<=5){if(Math.abs(power-prior)<=.5){const r=track.getBoundingClientRect();showPower(5+(e.clientY-r.top)/r.height*95)}return}
+  if(Math.abs(dy)<=5){
+   if(powerMoved)showPower(prior);
+   else if(Math.abs(power-prior)<=.5){const r=track.getBoundingClientRect();showPower(5+(e.clientY-r.top)/r.height*95)}
+   return;
+  }
+  // Some browsers coalesce a quick swipe into pointerdown + pointerup,
+  // omitting pointermove entirely. Use the FINAL release coordinate to set
+  // the actual impulse, otherwise a full pull fires at stale default power.
+  const r=track.getBoundingClientRect();
+  if(dy>5)showPower(5+95*Math.min(1,dy/Math.max(65,r.height*.65)));
+  else if(dy<-5)showPower(5+(e.clientY-r.top)/r.height*95);
   // Small pulls adjust power without unexpectedly releasing a weak shot.
   // SHOOT remains available for any chosen finesse strength.
   if(dy>=Math.max(42,track.clientHeight*.4)){if(shoot())showPower(45)}
