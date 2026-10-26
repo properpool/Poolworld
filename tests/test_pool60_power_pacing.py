@@ -38,6 +38,7 @@ with sync_playwright() as p:
    check(f'{w}x{h} {fps}fps maintains real-time simulation',abs(result['ticks']-result['expected'])<=2,result)
   page.close()
   page=page_new()
+  page.locator('details summary').click()
   distances=[]
   for level in (10,25,50,75,100):
    page.evaluate('''()=>{rack();balls=balls.slice(0,1);breakShot=false;aim=0;spin=0;follow=0;}''')
