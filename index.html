@@ -322,7 +322,7 @@ function render(){ctx.clearRect(0,0,W,H);ctx.drawImage(bg,0,0);if(!shooting&&!ga
  if(ballInHand){ctx.save();ctx.strokeStyle='#ffdb79';ctx.lineWidth=3;ctx.setLineDash([6,6]);ctx.beginPath();ctx.arc(balls[0].x,balls[0].y,rad+7,0,pi*2);ctx.stroke();ctx.restore()}}
 function drawAim(){const c=balls[0],dx=Math.cos(aim),dy=Math.sin(aim);if(guide){ctx.setLineDash([9,8]);ctx.lineWidth=2.4;ctx.strokeStyle='#f7f5dcdd';ctx.beginPath();ctx.moveTo(c.x+dx*rad,c.y+dy*rad);let hit=900,object=null;for(let b of balls){if(b.id===0||b.potted)continue;const ox=b.x-c.x,oy=b.y-c.y,proj=ox*dx+oy*dy,perp2=ox*ox+oy*oy-proj*proj;if(proj>0&&perp2<(2*rad)**2){let d=proj-Math.sqrt((2*rad)**2-perp2);if(d<hit){hit=d;object=b}}}if(!object){const tx=dx>0?(R-rad-c.x)/dx:(L+rad-c.x)/dx,ty=dy>0?(B-rad-c.y)/dy:(T+rad-c.y)/dy;hit=Math.min(tx>0?tx:900,ty>0?ty:900)}ctx.lineTo(c.x+dx*hit,c.y+dy*hit);ctx.stroke();ctx.setLineDash([]);if(object){const hx=c.x+dx*hit,hy=c.y+dy*hit;ctx.strokeStyle='#ffffff80';ctx.beginPath();ctx.arc(hx,hy,rad,0,pi*2);ctx.stroke();const nx=(object.x-hx)/(2*rad),ny=(object.y-hy)/(2*rad);ctx.strokeStyle='#ffe1a6bb';ctx.setLineDash([4,5]);ctx.beginPath();ctx.moveTo(object.x,object.y);ctx.lineTo(object.x+nx*100,object.y+ny*100);ctx.stroke();ctx.setLineDash([])}}ctx.save();ctx.translate(c.x,c.y);ctx.rotate(aim);ctx.strokeStyle='#17110d';ctx.lineWidth=14;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-rad-19,0);ctx.lineTo(-250,0);ctx.stroke();const shaft=ctx.createLinearGradient(0,-5,0,5);shaft.addColorStop(0,'#f4db9b');shaft.addColorStop(.5,'#bd8140');shaft.addColorStop(1,'#6b3d1d');ctx.strokeStyle=shaft;ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(-rad-19,0);ctx.lineTo(-245,0);ctx.stroke();ctx.strokeStyle='#e8e4d8';ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(-rad-19,0);ctx.lineTo(-rad-29,0);ctx.stroke();ctx.restore()}
 // Physics: fixed 120Hz steps; translational and rotational impulses bounded.
-const STEP=1/120;let accumulator=0,last=0,renderDirty=true;
+const STEP=1/120,POCKET_CAPTURE_RADIUS2=(pocket*.74)**2;let accumulator=0,last=0,renderDirty=true;
 // Determine which object the cue reaches first within a physics tick.
 // Iteration order through the rack is not a valid substitute for contact time:
 // in a tight cluster the cue can overlap two balls during the same 120Hz tick.
@@ -549,7 +549,7 @@ function physics(dt){
   prev[0]=q[0];prev[1]=q[1];prev[2]=q[2];prev[3]=q[3];
  }
  const before=beforePositions,scale=dt*60;for(let bi=0;bi<balls.length;bi++){const b=balls[bi];if(b.potted)continue;const speed=Math.hypot(b.vx,b.vy);if(speed>0){const decel=(.012+.0016*Math.min(speed,4))*scale;const f=Math.max(0,(speed-decel)/speed);b.vx*=f;b.vy*=f;if(speed<.021){b.vx=b.vy=0}const dx=b.vx*scale,dy=b.vy*scale;b.x+=dx;b.y+=dy;// Side-spin (English) changes rail contacts, not the free-flight path of a rolling ball.
-      b.spin*=Math.pow(.984,scale);b.follow*=Math.pow(.995,scale)}for(const [hx,hy] of holes){if(Math.hypot(b.x-hx,b.y-hy)<pocket*.74){pocketBall(b);break}}if(b.potted)continue;collideJaw(b);constrainRail(b);
+      b.spin*=Math.pow(.984,scale);b.follow*=Math.pow(.995,scale)}for(const [hx,hy] of holes){const pdx=b.x-hx,pdy=b.y-hy;if(pdx*pdx+pdy*pdy<POCKET_CAPTURE_RADIUS2){pocketBall(b);break}}if(b.potted)continue;collideJaw(b);constrainRail(b);
  // Roll the visible sphere by its ACTUAL travel after rail and jaw constraints.
  // The proposed free-flight step can overshoot a cushion; rotating by that
  // overshoot made the ball texture visibly skid at hard rail contacts.
