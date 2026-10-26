@@ -102,6 +102,8 @@ with sync_playwright() as pw:
         check(label+' simultaneous sound events stay distinct',mixed['detail']['valid'],mixed)
         check(label+' all event payloads keep legacy two-element array API',
               rail['valid'] and pocket['valid'] and mixed['valid'] and full['valid'],result)
+        check(label+' full-rack collision events bounded by peak queue length',
+              full['unique']<=full['peak'],full)
         check(label+' natural full rack has finite legal physics',
               full['detail']['finite'] and full['detail']['legal'] and full['detail']['shotRecorded'],full)
         check(label+' no browser exceptions',not errors,errors)
