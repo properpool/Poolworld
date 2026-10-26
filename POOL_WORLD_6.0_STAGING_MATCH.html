@@ -482,7 +482,7 @@ for(let ci=0;ci<contacts.length;){
  if(contacts.length)projectRailContactOverlaps();
 }
 function settled(){return balls.every(b=>b.potted||Math.hypot(b.vx,b.vy)<.022)}
-function frame(t){let elapsed=last?Math.min((t-last)/1000,.045):0;last=t;accumulator+=elapsed;let n=0;while(accumulator>=STEP&&n++<6){if(shooting)physics(STEP);accumulator-=STEP}if(shooting){for(let i=0;i<Math.min(events.length,8);i++){const [kind,v]=events[i];sound(kind,v)}events.length=0;if(settled())resolveShot()}render();requestAnimationFrame(frame)}
+function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.0833)):0;last=t;accumulator+=elapsed;let n=0;while(accumulator>=STEP&&n++<11){if(shooting)physics(STEP);accumulator-=STEP}if(shooting){for(let i=0;i<Math.min(events.length,8);i++){const [kind,v]=events[i];sound(kind,v)}events.length=0;if(settled())resolveShot()}render();requestAnimationFrame(frame)}
 // Calibrated to table dimensions: mid-power shots must cross the table,
 // while short finesse shots remain possible. This is a gameplay tuning curve,
 // not a measurement of a real cue's impulse.
@@ -531,14 +531,24 @@ canvas.addEventListener('pointerup',finishAim);canvas.addEventListener('pointerc
 canvas.addEventListener('lostpointercapture',finishAim);
 const track=$('track');let powerPointer=null,powerStart=45;
 function showPower(p){power=Math.max(5,Math.min(100,p));$('strength').value=power;$('powerValue').textContent=Math.round(power)+'%';const h=track.clientHeight;const y=(power-5)/95*(h-22)+11;$('handle').style.top=y+'px';$('fill').style.height=y+'px'}
-function padStart(e){if(shooting||gameOver||ballInHand||powerDrag)return;e.preventDefault();powerDrag=true;powerPointer=e.pointerId;powerY=e.clientY;powerStart=power;track.setPointerCapture(e.pointerId);const r=track.getBoundingClientRect();showPower(5+(e.clientY-r.top)/r.height*95)}
-function padMove(e){if(!powerDrag||e.pointerId!==powerPointer)return;e.preventDefault();const r=track.getBoundingClientRect();showPower(5+(e.clientY-r.top)/r.height*95)}
-function padEnd(e){if(!powerDrag||e.pointerId!==powerPointer)return;powerDrag=false;powerPointer=null;
- // A tap changes power. Require a substantial pull before auto-shooting:
- // a 12px finger wobble on a short Samsung landscape slider was unsafe.
- // Cancelled gestures restore the pre-drag setting and never fire.
- if(e.type==='pointercancel'||e.type==='lostpointercapture'){showPower(powerStart);return}
- if(e.type==='pointerup'&&e.clientY-powerY>=Math.max(18,Math.min(28,track.clientHeight*.24))){if(shoot())showPower(45)}
+function padStart(e){if(shooting||gameOver||ballInHand||powerDrag)return;e.preventDefault();powerDrag=true;powerPointer=e.pointerId;powerY=e.clientY;powerStart=power;track.setPointerCapture(e.pointerId)}
+function padMove(e){if(!powerDrag||e.pointerId!==powerPointer)return;e.preventDefault();
+ const dy=e.clientY-powerY,r=track.getBoundingClientRect();
+ // Pullback strength is relative to the initial finger position.
+ // An absolute screen Y previously fired unexpectedly weak short pulls.
+ if(dy>5)showPower(5+95*Math.min(1,dy/Math.max(65,r.height*.65)));
+ else if(dy<-5)showPower(5+(e.clientY-r.top)/r.height*95);
+}
+function padEnd(e){if(!powerDrag||e.pointerId!==powerPointer)return;
+ const dy=e.clientY-powerY,prior=powerStart;
+ powerDrag=false;powerPointer=null;
+ if(e.type==='pointercancel'||e.type==='lostpointercapture'){showPower(prior);return}
+ if(e.type==='pointerup'){
+  if(Math.abs(dy)<=5){const r=track.getBoundingClientRect();showPower(5+(e.clientY-r.top)/r.height*95);return}
+  // Small pulls adjust power without unexpectedly releasing a weak shot.
+  // SHOOT remains available for any chosen finesse strength.
+  if(dy>=Math.max(42,track.clientHeight*.4)){if(shoot())showPower(45)}
+ }
 }
 track.addEventListener('pointerdown',padStart);track.addEventListener('pointermove',padMove);track.addEventListener('pointerup',padEnd);track.addEventListener('pointercancel',padEnd);
 // Releasing pointer capture unexpectedly must never leave the slider stuck
