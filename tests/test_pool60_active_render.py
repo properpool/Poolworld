@@ -39,6 +39,8 @@ with sync_playwright() as pw:
   # Full-rack shot: exercise visible 16-ball drawing over 48 frames.
   shot=page.evaluate("""() => {
    showPower(100);aim=0;shoot();
+   // Exclude the intentional once-per-shot undo snapshot; measure hot ticks.
+   alloc.ballSnapshotMaps=0;alloc.quatMaps=0;
    const cueRollQ=balls[0].rollQ;
    for(let i=1;i<=48;i++)frame(1000+i*1000/60);
    const times=perf.times.slice().sort((a,b)=>a-b);
