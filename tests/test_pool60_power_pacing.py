@@ -20,7 +20,7 @@ with sync_playwright() as p:
   mobile=w<1000
   def page_new():
    pg=browser.new_page(viewport={'width':w,'height':h},is_mobile=mobile,has_touch=mobile)
-   pg.add_init_script('window.requestAnimationFrame=()=>0')
+   pg.evaluate('window.requestAnimationFrame=()=>0')
    pg.set_content(HTML,wait_until='load')
    return pg
   page=page_new()
