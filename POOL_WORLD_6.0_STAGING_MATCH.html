@@ -616,7 +616,11 @@ for(let ci=0;ci<contacts.length;){
  }
 }
 function settled(){return balls.every(b=>b.potted||Math.hypot(b.vx,b.vy)<.022)}
-function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.0833)):0;last=t;accumulator+=elapsed;let n=0;while(accumulator>=STEP&&n++<11){if(shooting)physics(STEP);accumulator-=STEP}if(shooting){for(let i=0;i<Math.min(events.length,8);i++){const [kind,v]=events[i];sound(kind,v)}events.length=0;if(settled())resolveShot()}if(shooting||renderDirty){interpolateVisual=shooting;render();interpolateVisual=false;renderDirty=false}requestAnimationFrame(frame)}
+// A brief 100-250ms render stall must not erase shot motion. Carry bounded
+// 120Hz simulation debt into later callbacks rather than discarding elapsed
+// time; limit each callback to eight physics ticks to avoid a catch-up burst.
+// While idle, no simulation time is owed by the next shot.
+function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.25)):0;last=t;if(shooting)accumulator+=elapsed;else accumulator=0;let n=0;while(shooting&&accumulator>=STEP&&n<8){physics(STEP);accumulator-=STEP;n++}if(shooting){for(let i=0;i<Math.min(events.length,8);i++){const [kind,v]=events[i];sound(kind,v)}events.length=0;if(settled())resolveShot()}if(shooting||renderDirty){interpolateVisual=shooting;render();interpolateVisual=false;renderDirty=false}requestAnimationFrame(frame)}
 // Calibrated to table dimensions: mid-power shots must cross the table,
 // while short finesse shots remain possible. This is a gameplay tuning curve,
 // not a measurement of a real cue's impulse.
