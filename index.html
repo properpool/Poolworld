@@ -518,7 +518,24 @@ for(let ci=0;ci<contacts.length;){
   if(contacts.length)collideJaw(b);
   constrainRail(b);
  }
- if(contacts.length)projectRailContactOverlaps();
+ // The rail/jaw overlap solver sorts the entire rack and may run dozens of
+ // jaw-aware separation sweeps. Most ordinary impulses already separate all
+ // pairs to its own 0.002-unit tolerance. Test squared separation first and
+ // skip the solver only when it would make exactly zero corrections.
+ // Dense rail-side chains still enter the full solver unchanged.
+ if(contacts.length){
+  const clearance=2*rad-.002,clearance2=clearance*clearance;
+  let unresolved=false;
+  for(let i=0;i<balls.length&&!unresolved;i++){
+   const a=balls[i];if(a.potted)continue;
+   for(let j=i+1;j<balls.length;j++){
+    const b=balls[j];if(b.potted)continue;
+    const dx=b.x-a.x,dy=b.y-a.y;
+    if(dx*dx+dy*dy<clearance2){unresolved=true;break}
+   }
+  }
+  if(unresolved)projectRailContactOverlaps();
+ }
 }
 function settled(){return balls.every(b=>b.potted||Math.hypot(b.vx,b.vy)<.022)}
 function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.0833)):0;last=t;accumulator+=elapsed;let n=0;while(accumulator>=STEP&&n++<11){if(shooting)physics(STEP);accumulator-=STEP}if(shooting){for(let i=0;i<Math.min(events.length,8);i++){const [kind,v]=events[i];sound(kind,v)}events.length=0;if(settled())resolveShot()}if(shooting||renderDirty){render();renderDirty=false}requestAnimationFrame(frame)}
