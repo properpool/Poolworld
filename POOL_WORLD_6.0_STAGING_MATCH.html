@@ -163,15 +163,42 @@ function premiumFinish(c){
 }
 
 staticTable();premiumFinish(g);
+// Pre-render the fixed porcelain/paint gradients once at 2x resolution.
+// Previously every active frame created 16 radial and 7 stripe gradients,
+// causing avoidable Canvas2D allocations during full-rack motion. Keep
+// moving stripes, upright numbers, highlights and rotating measle dots live.
+const shellSpriteSize=rad*2+4;
+const shellSprites=colors.map((_,id)=>{
+ const s=document.createElement('canvas');
+ s.width=s.height=Math.ceil(shellSpriteSize*2);
+ const sc=s.getContext('2d');
+ sc.scale(s.width/shellSpriteSize,s.height/shellSpriteSize);
+ sc.translate(shellSpriteSize/2,shellSpriteSize/2);
+ const striped=id>=9&&id<=15;
+ const shell=sc.createRadialGradient(-rad*.36,-rad*.47,1,rad*.16,rad*.16,rad*1.36);
+ shell.addColorStop(0,id===0?'#ffffff':striped?'#fffdf2':'#ffffff');
+ shell.addColorStop(.24,id===0?'#f9faf7':striped?'#f5f0e5':colors[id]);
+ shell.addColorStop(1,id===0?'#9fa8a9':striped?'#a7aaa5':'#141a1b');
+ sc.fillStyle=shell;sc.beginPath();sc.arc(0,0,rad,0,pi*2);sc.fill();
+ return s;
+});
+const stripeSpriteWidth=rad*3;
+const stripeSprites=colors.map((_,id)=>{
+ if(id<9||id>15)return null;
+ const s=document.createElement('canvas');s.width=Math.ceil(stripeSpriteWidth*2);s.height=4;
+ const sc=s.getContext('2d');sc.scale(s.width/stripeSpriteWidth,s.height/2);
+ // The source band runs from -1.5r to +1.5r in ball-local coordinates.
+ const band=sc.createLinearGradient(rad*.5,0,rad*2.5,0);
+ band.addColorStop(0,'#182127');band.addColorStop(.26,colors[id]);
+ band.addColorStop(.73,colors[id]);band.addColorStop(1,'#182127');
+ sc.fillStyle=band;sc.fillRect(0,0,stripeSpriteWidth,2);
+ return s;
+});
 function drawBall(b){
  if(b.potted)return;
  const {x,y,id}=b,striped=id>=9&&id<=15;
  ctx.fillStyle='#0009';ctx.beginPath();ctx.ellipse(x+2.4,y+4.2,rad+1.5,rad*.78,0,0,pi*2);ctx.fill();
- const shell=ctx.createRadialGradient(x-rad*.36,y-rad*.47,1,x+rad*.16,y+rad*.16,rad*1.36);
- shell.addColorStop(0,id===0?'#ffffff':striped?'#fffdf2':'#ffffff');
- shell.addColorStop(.24,id===0?'#f9faf7':striped?'#f5f0e5':colors[id]);
- shell.addColorStop(1,id===0?'#9fa8a9':striped?'#a7aaa5':'#141a1b');
- ctx.fillStyle=shell;ctx.beginPath();ctx.arc(x,y,rad,0,pi*2);ctx.fill();
+ ctx.drawImage(shellSprites[id],x-shellSpriteSize/2,y-shellSpriteSize/2,shellSpriteSize,shellSpriteSize);
  if(striped){
   // The stripe axis is attached to the rotating sphere. Its screen-space
   // projection turns and foreshortens the band instead of leaving it painted
@@ -182,10 +209,7 @@ function drawBall(b){
   ctx.save();ctx.beginPath();ctx.arc(x,y,rad-.35,0,pi*2);ctx.clip();
   ctx.translate(x,y);ctx.rotate(tilt);
   const half=rad*(.26+.27*facing);
-  const band=ctx.createLinearGradient(-rad,0,rad,0);
-  band.addColorStop(0,'#182127');band.addColorStop(.26,colors[id]);
-  band.addColorStop(.73,colors[id]);band.addColorStop(1,'#182127');
-  ctx.fillStyle=band;ctx.fillRect(-rad*1.5,-half,rad*3,half*2);
+  ctx.drawImage(stripeSprites[id],-rad*1.5,-half,rad*3,half*2);
   ctx.restore();
  }
  ctx.strokeStyle='#ffffff5c';ctx.lineWidth=.75;ctx.beginPath();ctx.arc(x,y,rad-.6,0,pi*2);ctx.stroke();
