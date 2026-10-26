@@ -640,7 +640,17 @@ canvas.addEventListener('pointerdown',e=>{if(shooting||gameOver||aimPointer!==nu
  if(!precisionAim&&!aimFineDrag)pointAim(e)
 });
 canvas.addEventListener('pointermove',e=>{if(dragAim&&e.pointerId===aimPointer)pointAim(e)});
-function finishAim(e){if(e.pointerId!==aimPointer)return;renderDirty=true;
+function finishAim(e){if(e.pointerId!==aimPointer)return;
+ // A fast touchscreen/mouse release may arrive with no intermediate move.
+ // Apply the final release coordinate before clearing pointer capture, so the
+ // shot follows where the finger actually finished instead of its start.
+ // A release outside the table must NOT snap the aim to an off-cloth point.
+ if(e.type==='pointerup'){
+  const bounds=canvas.getBoundingClientRect();
+  if(e.clientX>=bounds.left&&e.clientX<=bounds.right&&
+     e.clientY>=bounds.top&&e.clientY<=bounds.bottom)pointAim(e);
+ }
+ renderDirty=true;
  // An interrupted mobile gesture is not an intentional change of direction.
  if(e.type==='pointercancel'||e.type==='lostpointercapture'){aim=aimStartAngle;lastAim=aim}
  dragAim=false;aimPointer=null;aimFineDrag=false}
