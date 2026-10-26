@@ -351,6 +351,19 @@ function projectRailContactOverlaps(){
   else if(ux< -1e-10)cap=Math.min(cap,(b.x-loX)/-ux);
   if(uy>1e-10)cap=Math.min(cap,(hiY-b.y)/uy);
   else if(uy< -1e-10)cap=Math.min(cap,(b.y-loY)/-uy);
+  // A rail-side ball must not be separated INTO a rounded pocket nose.
+  // Cap positional projection at the first swept intersection with each
+  // jaw's expanded radius. This keeps the remaining overlap available for
+  // the other ball to resolve without introducing a velocity impulse.
+  const jawLimit=rad+jawRadius+.002;
+  for(const [jx,jy] of jaws){
+   const px=b.x-jx,py=b.y-jy,dot=px*ux+py*uy;
+   if(dot>=0)continue;
+   const c=px*px+py*py-jawLimit*jawLimit;
+   if(c<=0){cap=0;continue}
+   const disc=dot*dot-c;
+   if(disc>=0)cap=Math.min(cap,Math.max(0,-dot-Math.sqrt(disc)));
+  }
   return Math.max(0,cap);
  };
  // A rail-side chain can transfer penetration to the next neighbour.
@@ -459,7 +472,13 @@ for(let ci=0;ci<contacts.length;){
  }}
  // Contact position correction happens after the first rail pass. Keep
  // rail-side clusters on the cloth in this same 120Hz physics tick.
- for(const b of balls)if(!b.potted)constrainRail(b);
+ for(const b of balls)if(!b.potted){
+  // Ball-to-ball impulses can drive a previously clear ball into a rubber
+  // pocket jaw after the earlier jaw pass. Resolve that contact in the same
+  // tick, before the jaw-aware positional pair projection.
+  if(contacts.length)collideJaw(b);
+  constrainRail(b);
+ }
  if(contacts.length)projectRailContactOverlaps();
 }
 function settled(){return balls.every(b=>b.potted||Math.hypot(b.vx,b.vy)<.022)}
