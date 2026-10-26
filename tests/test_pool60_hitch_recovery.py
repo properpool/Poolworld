@@ -48,6 +48,15 @@ with sync_playwright() as pw:
             wallSeconds:gaps.reduce((a,b)=>a+b,0)/1000,
             moving:shooting,finite:balls.every(b=>
               [b.x,b.y,b.vx,b.vy].every(Number.isFinite))};
+          // A resumed idle page must not bank unused physics time and
+          // fast-forward the next shot when the user presses SHOOT.
+          rack();last=1000;accumulator=0;
+          frame(1250);
+          const idleDebt=accumulator;
+          showPower(100);aim=0;shoot();ticks=0;
+          frame(1250+1000/60);
+          const idle={debt:idleDebt,firstShotTicks:ticks,
+            finite:balls.every(b=>[b.x,b.y,b.vx,b.vy].every(Number.isFinite))};
           const normal={};
           for(const hz of [60,90,144]){
             start();stamp=1000;
@@ -61,7 +70,7 @@ with sync_playwright() as pw:
               accumulator,finite:balls.every(b=>
                 [b.x,b.y,b.vx,b.vy].every(Number.isFinite))};
           }
-          return {hitch,normal};
+          return {hitch,idle,normal};
         }""")
         hitch=data['hitch'];counts=hitch['perFrame']
         check(label+' hitch break shot remains active and finite',
@@ -74,6 +83,11 @@ with sync_playwright() as pw:
             counts[1]<=8 and counts[1]>=6,hitch)
         check(label+' physics catches up across subsequent callbacks',
             sum(counts[2:])>=14 and hitch['accumulator']<1/120+1e-5,hitch)
+        idle=data['idle']
+        check(label+' idle tab resume never banks stale physics debt',
+            idle['debt']<1/120+1e-5,idle)
+        check(label+' first shot after idle pause is not fast-forwarded',
+            idle['firstShotTicks']<=3 and idle['finite'],idle)
         for hz in (60,90,144):
             normal=data['normal'][hz]
             check(label+f' {hz}Hz normal cadence retains 120Hz physics',
