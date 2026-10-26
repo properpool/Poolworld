@@ -198,7 +198,7 @@ const stripeSprites=colors.map((_,id)=>{
  sc.fillStyle=band;sc.fillRect(0,0,stripeSpriteWidth,2);
  return s;
 });
-function drawBall(b){
+function drawBall(b,orientation=b.rollQ){
  if(b.potted)return;
  const {x,y,id}=b,striped=id>=9&&id<=15;
  ctx.fillStyle='#0009';ctx.beginPath();ctx.ellipse(x+2.4,y+4.2,rad+1.5,rad*.78,0,0,pi*2);ctx.fill();
@@ -207,7 +207,7 @@ function drawBall(b){
   // The stripe axis is attached to the rotating sphere. Its screen-space
   // projection turns and foreshortens the band instead of leaving it painted
   // immobile across a moving ball. Number badges stay upright for legibility.
-  const axis=rollMarker(b.rollQ||[1,0,0,0],[0,1,0]);
+  const axis=rollMarker(orientation||[1,0,0,0],[0,1,0]);
   const facing=Math.hypot(axis[0],axis[1]);
   const tilt=Math.atan2(axis[1],axis[0])-pi/2;
   ctx.save();ctx.beginPath();ctx.arc(x,y,rad-.35,0,pi*2);ctx.clip();
@@ -221,7 +221,7 @@ function drawBall(b){
  // Six muted burgundy measle dots make cue-ball rolling and follow/draw
  // visually observable without moving the table-space specular highlight.
  if(id===0){
-  const q=b.rollQ||[1,0,0,0];
+  const q=orientation||[1,0,0,0];
   const marks=[[0,0,1],[0,0,-1],[1,0,0],[-1,0,0],[0,1,0],[0,-1,0]];
   for(const mark of marks){
    const v=rollMarker(q,mark);if(v[2]<=.07)continue;
@@ -241,15 +241,30 @@ function drawBall(b){
 // juddering even when physics and rendering individually run quickly.
 // Interpolate ONLY the drawing coordinates, never the authoritative state.
 let interpolateVisual=false;
+// Keep one previous orientation per ball, as with beforePositions. Blend
+// only the drawn quaternion; authoritative rollQ must never be mutated.
+// Normalized lerp follows the shortest quaternion arc, including sign flips.
+const beforeRollQ=[],visualRollQ=[];
+function blendedRoll(i,alpha){
+ const a=beforeRollQ[i],b=balls[i].rollQ;
+ const q=visualRollQ[i]||(visualRollQ[i]=[1,0,0,0]);
+ const sign=a[0]*b[0]+a[1]*b[1]+a[2]*b[2]+a[3]*b[3]<0?-1:1;
+ const remain=1-alpha;
+ const w=remain*a[0]+alpha*sign*b[0],x=remain*a[1]+alpha*sign*b[1];
+ const y=remain*a[2]+alpha*sign*b[2],z=remain*a[3]+alpha*sign*b[3];
+ const inv=1/Math.hypot(w,x,y,z);
+ q[0]=w*inv;q[1]=x*inv;q[2]=y*inv;q[3]=z*inv;
+ return q;
+}
 function render(){ctx.clearRect(0,0,W,H);ctx.drawImage(bg,0,0);if(!shooting&&!gameOver&&!ballInHand&&!balls[0].potted){drawAim()}
- const blend=interpolateVisual&&shooting&&beforePositions.length===balls.length;
+ const blend=interpolateVisual&&shooting&&beforePositions.length===balls.length&&beforeRollQ.length===balls.length;
  const alpha=blend?Math.max(0,Math.min(1,accumulator/STEP)):1;
  for(let i=0;i<balls.length;i++){
   const b=balls[i],p=blend?beforePositions[i]:null;
   if(!p||b.potted){drawBall(b);continue}
   const x=b.x,y=b.y;
   b.x=p[0]+(x-p[0])*alpha;b.y=p[1]+(y-p[1])*alpha;
-  drawBall(b);
+  drawBall(b,blendedRoll(i,alpha));
   b.x=x;b.y=y;
  }
  if(ballInHand){ctx.save();ctx.strokeStyle='#ffdb79';ctx.lineWidth=3;ctx.setLineDash([6,6]);ctx.beginPath();ctx.arc(balls[0].x,balls[0].y,rad+7,0,pi*2);ctx.stroke();ctx.restore()}}
@@ -449,8 +464,16 @@ function physics(dt){
   beforePositions.length=balls.length;
   for(let i=0;i<balls.length;i++)beforePositions[i]=[0,0];
  }
+ if(beforeRollQ.length!==balls.length){
+  beforeRollQ.length=balls.length;visualRollQ.length=balls.length;
+  for(let i=0;i<balls.length;i++){
+   beforeRollQ[i]=[1,0,0,0];visualRollQ[i]=[1,0,0,0];
+  }
+ }
  for(let i=0;i<balls.length;i++){
   beforePositions[i][0]=balls[i].x;beforePositions[i][1]=balls[i].y;
+  const q=balls[i].rollQ,prev=beforeRollQ[i];
+  prev[0]=q[0];prev[1]=q[1];prev[2]=q[2];prev[3]=q[3];
  }
  const before=beforePositions,scale=dt*60;for(let bi=0;bi<balls.length;bi++){const b=balls[bi];if(b.potted)continue;const speed=Math.hypot(b.vx,b.vy);if(speed>0){const decel=(.012+.0016*Math.min(speed,4))*scale;const f=Math.max(0,(speed-decel)/speed);b.vx*=f;b.vy*=f;if(speed<.021){b.vx=b.vy=0}const dx=b.vx*scale,dy=b.vy*scale;b.x+=dx;b.y+=dy;// Side-spin (English) changes rail contacts, not the free-flight path of a rolling ball.
       b.spin*=Math.pow(.984,scale);b.follow*=Math.pow(.995,scale)}for(const [hx,hy] of holes){if(Math.hypot(b.x-hx,b.y-hy)<pocket*.74){pocketBall(b);break}}if(b.potted)continue;collideJaw(b);constrainRail(b);
@@ -566,9 +589,13 @@ function shoot(){if(shooting||gameOver||ballInHand||balls[0].potted)return false
  // The first rendered shot frame can precede its first physics tick.
  // Seed previous positions now, so it cannot interpolate from an old rack.
  beforePositions.length=balls.length;
+ beforeRollQ.length=balls.length;visualRollQ.length=balls.length;
  for(let i=0;i<balls.length;i++){
   const p=beforePositions[i]||(beforePositions[i]=[0,0]);
   p[0]=balls[i].x;p[1]=balls[i].y;
+  const q=balls[i].rollQ,prev=beforeRollQ[i]||(beforeRollQ[i]=[1,0,0,0]);
+  prev[0]=q[0];prev[1]=q[1];prev[2]=q[2];prev[3]=q[3];
+  if(!visualRollQ[i])visualRollQ[i]=[1,0,0,0];
  }
  events.length=0;sound('cue',Math.max(.3,power/90));updateHUD();$('status').textContent='Shot in progress…';return true}
 function pointerCoords(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
