@@ -35,7 +35,9 @@ with sync_playwright() as pw:
             const original=contacts.push;
             contacts.push=function(...items){
               for(const item of items){seen.add(item);total++}
-              return original.apply(this,items);
+              const result=original.apply(this,items);
+              peak=Math.max(peak,this.length);
+              return result;
             };
             try{run(()=>{peak=Math.max(peak,contacts.length)})}
             finally{contacts.push=original}
