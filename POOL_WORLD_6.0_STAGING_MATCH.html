@@ -380,7 +380,7 @@ function resolveSimultaneousContacts(batch,start=0,end=batch.length){
   ca.vx-=j*p.nx;ca.vy-=j*p.ny;cb.vx+=j*p.nx;cb.vy+=j*p.ny;
   const push=p.overlap*.51;
   ca.x-=push*p.nx;ca.y-=push*p.ny;cb.x+=push*p.nx;cb.y+=push*p.ny;
-  if(Math.abs(p.rel)>.11)events.push(['ball',Math.abs(p.rel)/5]);
+  if(Math.abs(p.rel)>.11)queueSound('ball',Math.abs(p.rel)/5);
  }
  for(const b of members){const c=change.get(b);b.vx+=c.vx;b.vy+=c.vy;b.x+=c.x;b.y+=c.y}
  // Tangential impulses are also sampled simultaneously, preserving symmetry.
