@@ -300,9 +300,10 @@ function earliestCueContact(before){
 // normal constraints from ONE pre-impact velocity state. Only contacts with
 // matching swept times enter this path; ordinary single hits retain the
 // established restitution and spin response below.
-function resolveSimultaneousContacts(batch){
+function resolveSimultaneousContacts(batch,start=0,end=batch.length){
  const pairs=[];
- for(const {a,b} of batch){
+ for(let batchIndex=start;batchIndex<end;batchIndex++){
+  const {a,b}=batch[batchIndex];
   if(a.potted||b.potted)continue;
   const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),min=2*rad;
   if(d>=min)continue;
@@ -471,6 +472,10 @@ function projectRailContactOverlaps(){
 // Snapshot positions into reusable buffers instead of allocating an array of
 // [x,y] pairs on each 120Hz physics tick. Resize only for changed test/rack sizes.
 const beforePositions=[];
+// Reuse the swept-contact list across 120Hz ticks. Each physics tick previously
+// allocated a fresh list even with zero contacts; tight collision groups also
+// copied portions of it into temporary arrays before solving.
+const contacts=[];
 function physics(dt){
  if(beforePositions.length!==balls.length){
   beforePositions.length=balls.length;
@@ -498,7 +503,7 @@ earliestCueContact(before);
 // Resolve overlapping pairs in swept-contact order, not rack array order.
 // This preserves chronological cue/object impulses in a 120Hz physics step
 // and makes a fixed physical layout invariant to object array permutations.
-const contacts=[];
+contacts.length=0;
 for(let i=0;i<balls.length;i++){
  const a=balls[i];if(a.potted)continue;
  for(let j=i+1;j<balls.length;j++){
@@ -525,7 +530,7 @@ for(let ci=0;ci<contacts.length;){
  // letting a tiny finger-angle or rack-offset difference arbitrarily
  // choose the first impulse. Wider-separated impacts remain sequential.
  while(end<contacts.length&&Math.abs(contacts[end].t-current.t)<.012)end++;
- if(end-ci>1&&resolveSimultaneousContacts(contacts.slice(ci,end))){ci=end;continue}
+ if(end-ci>1&&resolveSimultaneousContacts(contacts,ci,end)){ci=end;continue}
  ci++;
  const {a,b}=current;
  if(a.potted||b.potted)continue;
