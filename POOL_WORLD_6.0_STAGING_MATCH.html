@@ -490,6 +490,10 @@ const beforePositions=[];
 // allocated a fresh list even with zero contacts; tight collision groups also
 // copied portions of it into temporary arrays before solving.
 const contacts=[];
+// Reuse contact records as well as the list itself: crowded 120Hz collision
+// ticks otherwise allocate a new {a,b,t} object for every overlap. The pool
+// is indexed in detection order; contacts may still be sorted independently.
+const contactPool=[];
 function physics(dt){
  if(beforePositions.length!==balls.length){
   beforePositions.length=balls.length;
@@ -532,7 +536,11 @@ for(let i=0;i<balls.length;i++){
    const qa=dx*dx+dy*dy,qb=2*(sx*dx+sy*dy),disc=qb*qb-4*qa*c;
    if(qa>1e-12&&qb<0&&disc>=0)t=Math.max(0,Math.min(1,(-qb-Math.sqrt(disc))/(2*qa)));
   }
-  contacts.push({a,b,t});
+  const slot=contacts.length;
+  let contact=contactPool[slot];
+  if(!contact){contact={a,b,t};contactPool.push(contact)}
+  else{contact.a=a;contact.b=b;contact.t=t}
+  contacts.push(contact);
  }
 }
 contacts.sort((u,v)=>u.t-v.t||Math.min(u.a.id,u.b.id)-Math.min(v.a.id,v.b.id)||Math.max(u.a.id,u.b.id)-Math.max(v.a.id,v.b.id));
