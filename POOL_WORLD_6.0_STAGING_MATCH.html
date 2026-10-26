@@ -84,8 +84,8 @@ const groupOf=id=>id>=1&&id<=7?'solids':id>=9&&id<=15?'stripes':null;
 const remainingFor=p=>balls.filter(b=>!b.potted&&groupOf(b.id)===groups[p]).length;
 function canPlace(x,y){return Number.isFinite(x)&&Number.isFinite(y)&&x>=L+rad+2&&x<=R-rad-2&&y>=T+rad+2&&y<=B-rad-2&&!holes.some(([hx,hy])=>Math.hypot(x-hx,y-hy)<pocket+rad*.2)&&jaws.every(([jx,jy])=>Math.hypot(x-jx,y-jy)>=rad+jawRadius+.1)&&balls.every(b=>b.id===0||b.potted||Math.hypot(b.x-x,b.y-y)>=2*rad+.5)}
 function cuePosition(){const x0=L+(R-L)*.24,y0=(T+B)/2;if(canPlace(x0,y0))return [x0,y0];for(let y=T+rad+6;y<=B-rad-6;y+=rad*2.3)for(let x=L+rad+6;x<=R-rad-6;x+=rad*2.3)if(canPlace(x,y))return [x,y];return [x0,y0]}
-function snapshot(){return {balls:balls.map(b=>({...b})),turn,groups:{...groups},ballInHand,gameOver,winner,breakShot,aim,power,spin,follow}}
-function restore(state){balls=state.balls.map(b=>({...b}));turn=state.turn;groups={...state.groups};ballInHand=state.ballInHand;gameOver=state.gameOver;winner=state.winner;breakShot=state.breakShot;aim=state.aim;power=state.power??power;spin=state.spin??spin;follow=state.follow??follow;shooting=false;shot=null;events.length=0;accumulator=0;showPower(power);$('spin').value=spin;$('follow').value=follow;updateHUD()}
+function snapshot(){return {balls:balls.map(b=>({...b,rollQ:b.rollQ?[...b.rollQ]:[1,0,0,0]})),turn,groups:{...groups},ballInHand,gameOver,winner,breakShot,aim,power,spin,follow}}
+function restore(state){balls=state.balls.map(b=>({...b,rollQ:b.rollQ?[...b.rollQ]:[1,0,0,0]}));turn=state.turn;groups={...state.groups};ballInHand=state.ballInHand;gameOver=state.gameOver;winner=state.winner;breakShot=state.breakShot;aim=state.aim;power=state.power??power;spin=state.spin??spin;follow=state.follow??follow;shooting=false;shot=null;events.length=0;accumulator=0;showPower(power);$('spin').value=spin;$('follow').value=follow;updateHUD()}
 function pocketBall(b){if(b.potted)return;b.potted=true;b.vx=b.vy=0;if(shot){shot.pocketed.push(b.id);if(b.id===0)shot.scratch=true}events.push(['pocket',.85])}
 function resolveShot(){if(!shot)return;const s=shot;shot=null;shooting=false;
 // The whole table has settled. A frozen side-spin or follow value must not
@@ -114,9 +114,13 @@ function rotateRoll(b,dx,dy){
  const distance=Math.hypot(dx,dy);if(distance<1e-8)return;
  const half=distance/(2*rad),k=Math.sin(half)/distance;
  const a=Math.cos(half),x=-dy*k,y=dx*k;
- const q=b.rollQ||[1,0,0,0],w=q[0],qx=q[1],qy=q[2],qz=q[3];
- const next=[a*w-x*qx-y*qy,a*qx+x*w+y*qz,a*qy-x*qz+y*w,a*qz+x*qy-y*qx];
- const norm=Math.hypot(...next);b.rollQ=next.map(v=>v/norm);
+ // Reuse the ball's orientation buffer. At 120Hz, replacing the four-element
+ // quaternion on every moving ball generated two short-lived arrays per tick.
+ const q=b.rollQ||(b.rollQ=[1,0,0,0]),w=q[0],qx=q[1],qy=q[2],qz=q[3];
+ const n0=a*w-x*qx-y*qy,n1=a*qx+x*w+y*qz;
+ const n2=a*qy-x*qz+y*w,n3=a*qz+x*qy-y*qx;
+ const inv=1/Math.hypot(n0,n1,n2,n3);
+ q[0]=n0*inv;q[1]=n1*inv;q[2]=n2*inv;q[3]=n3*inv;
 }
 function rollMarker(q,p){
  const [w,x,y,z]=q,[px,py,pz]=p;
@@ -421,7 +425,18 @@ function projectRailContactOverlaps(){
   if(worst<=.01||!changed)break;
  }
 }
-function physics(dt){const before=balls.map(b=>[b.x,b.y]);const scale=dt*60;for(let bi=0;bi<balls.length;bi++){const b=balls[bi];if(b.potted)continue;const speed=Math.hypot(b.vx,b.vy);if(speed>0){const decel=(.012+.0016*Math.min(speed,4))*scale;const f=Math.max(0,(speed-decel)/speed);b.vx*=f;b.vy*=f;if(speed<.021){b.vx=b.vy=0}const dx=b.vx*scale,dy=b.vy*scale;b.x+=dx;b.y+=dy;// Side-spin (English) changes rail contacts, not the free-flight path of a rolling ball.
+// Snapshot positions into reusable buffers instead of allocating an array of
+// [x,y] pairs on each 120Hz physics tick. Resize only for changed test/rack sizes.
+const beforePositions=[];
+function physics(dt){
+ if(beforePositions.length!==balls.length){
+  beforePositions.length=balls.length;
+  for(let i=0;i<balls.length;i++)beforePositions[i]=[0,0];
+ }
+ for(let i=0;i<balls.length;i++){
+  beforePositions[i][0]=balls[i].x;beforePositions[i][1]=balls[i].y;
+ }
+ const before=beforePositions,scale=dt*60;for(let bi=0;bi<balls.length;bi++){const b=balls[bi];if(b.potted)continue;const speed=Math.hypot(b.vx,b.vy);if(speed>0){const decel=(.012+.0016*Math.min(speed,4))*scale;const f=Math.max(0,(speed-decel)/speed);b.vx*=f;b.vy*=f;if(speed<.021){b.vx=b.vy=0}const dx=b.vx*scale,dy=b.vy*scale;b.x+=dx;b.y+=dy;// Side-spin (English) changes rail contacts, not the free-flight path of a rolling ball.
       b.spin*=Math.pow(.984,scale);b.follow*=Math.pow(.995,scale)}for(const [hx,hy] of holes){if(Math.hypot(b.x-hx,b.y-hy)<pocket*.74){pocketBall(b);break}}if(b.potted)continue;collideJaw(b);constrainRail(b);
  // Roll the visible sphere by its ACTUAL travel after rail and jaw constraints.
  // The proposed free-flight step can overshoot a cushion; rotating by that
