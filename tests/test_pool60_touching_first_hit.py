@@ -28,7 +28,7 @@ with sync_playwright() as pw:
         page.evaluate('window.requestAnimationFrame=()=>0')
         page.set_content(HTML, wait_until='load')
         for direction in (-1,1):
-            for motion in ('away','still','tangent','object_away','toward','real_other'):
+            for motion in ('away','still','tangent','sliding_out','object_away','toward','real_other'):
                 data = page.evaluate("""([direction,motion])=>{
                   const cue=makeBall(0,400,285);
                   const neighbor=makeBall(1,400+direction*(2*rad-.001),285);
@@ -40,6 +40,7 @@ with sync_playwright() as pw:
                   if(motion==='away')cue.vx=-direction*8;
                   if(motion==='still')cue.vx=0;
                   if(motion==='tangent')cue.vy=8;
+                  if(motion==='sliding_out'){cue.vx=direction*.04;cue.vy=8;}
                   if(motion==='object_away')neighbor.vx=direction*8;
                   if(motion==='toward')cue.vx=direction*8;
                   if(motion==='real_other')cue.vx=-direction*9;
@@ -54,7 +55,7 @@ with sync_playwright() as pw:
                 label=f'{w}x{h} direction={direction} {motion}'
                 check(label+' starts with sub-tolerance resting contact',
                     abs(data['before']-(24.4-.001))<1e-5,data)
-                if motion in ('away','still','tangent','object_away'):
+                if motion in ('away','still','tangent','sliding_out','object_away'):
                     check(label+' no phantom cue first hit',
                         data['firstHit'] is None,data)
                     if motion != 'object_away':
