@@ -132,6 +132,8 @@ jobs:
         run: python tests/test_pool60_sound_event_pool.py
       - name: Reusable collision audio voices and concurrent playback (60 checks)
         run: python tests/test_pool60_audio_voice_reuse.py
+      - name: Six-pocket squared-distance capture and 120Hz sqrt regression
+        run: python tests/test_pool60_pocket_sqrt.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
