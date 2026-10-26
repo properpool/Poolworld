@@ -325,15 +325,27 @@ function resolveSimultaneousContacts(batch){
   const sign=(p.b===q.b?1:0)-(p.b===q.a?1:0)-(p.a===q.b?1:0)+(p.a===q.a?1:0);
   return sign*(p.nx*q.nx+p.ny*q.ny);
  };
- let impulses=pairs.map(()=>0);
+ // This Jacobi solver runs on tightly clustered breaks. The old version
+ // allocated a fresh impulses array on every one of its 32 iterations and
+ // recomputed the same pair-pair Jacobian coefficients 32 times. Reuse two
+ // numeric buffers and precompute those coefficients once per contact batch.
+ // Keep the iteration order, blend and precision identical to the old solver.
+ const count=pairs.length;
+ let impulses=new Float64Array(count),next=new Float64Array(count);
+ const coupling=new Float64Array(count*count);
+ for(let i=0;i<count;i++){
+  for(let k=0;k<count;k++){
+   if(k!==i)coupling[i*count+k]=influence(pairs[i],pairs[k]);
+  }
+ }
  for(let iter=0;iter<32;iter++){
-  const next=impulses.map((j,i)=>{
+  for(let i=0;i<count;i++){
    let other=0;
-   for(let k=0;k<pairs.length;k++)if(k!==i)other+=influence(pairs[i],pairs[k])*impulses[k];
+   for(let k=0;k<count;k++)if(k!==i)other+=coupling[i*count+k]*impulses[k];
    const desired=Math.max(0,(-(1+.955)*pairs[i].rel-other)/2);
-   return .55*j+.45*desired;
-  });
-  impulses=next;
+   next[i]=.55*impulses[i]+.45*desired;
+  }
+  const swap=impulses;impulses=next;next=swap;
  }
  // Accumulate both positional and normal velocity changes before applying any.
  const change=new Map(members.map(b=>[b,{x:0,y:0,vx:0,vy:0,spin:0}]));
