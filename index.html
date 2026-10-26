@@ -129,11 +129,18 @@ function rotateRoll(b,dx,dy){
  const inv=1/Math.hypot(n0,n1,n2,n3);
  q[0]=n0*inv;q[1]=n1*inv;q[2]=n2*inv;q[3]=n3*inv;
 }
-function rollMarker(q,p){
+function rollMarker(q,p,out){
  const [w,x,y,z]=q,[px,py,pz]=p;
  const tx=2*(y*pz-z*py),ty=2*(z*px-x*pz),tz=2*(x*py-y*px);
- return [px+w*tx+y*tz-z*ty,py+w*ty+z*tx-x*tz,pz+w*tz+x*ty-y*tx];
+ const vx=px+w*tx+y*tz-z*ty,vy=py+w*ty+z*tx-x*tz,vz=pz+w*tz+x*ty-y*tx;
+ // Keep the original return-new-array API for external physics tests.
+ // Active drawing supplies a shared output vector, avoiding one new array
+ // per rotating stripe or cue-ball measle dot every display frame.
+ if(out){out[0]=vx;out[1]=vy;out[2]=vz;return out}
+ return [vx,vy,vz];
 }
+const ROLL_STRIPE_AXIS=[0,1,0],ROLL_MARKER_OUT=[0,0,0];
+const ROLL_MEASLE_MARKS=[[0,0,1],[0,0,-1],[1,0,0],[-1,0,0],[0,1,0],[0,-1,0]];
 function rack(){balls=[makeBall(0,L+(R-L)*.24,(T+B)/2)];const bx=L+(R-L)*.71,cy=(T+B)/2,step=rad*2.035;let ids=[1,9,2,10,8,11,3,12,4,13,5,14,6,15,7],n=0;for(let row=0;row<5;row++)for(let j=0;j<=row;j++){const x=bx+row*step*.866,y=cy+(j-row/2)*step;balls.push(makeBall(ids[n++],x,y))}aim=0;shooting=false;shot=null;history=null;events.length=0;accumulator=0;turn=1;groups={1:null,2:null};ballInHand=false;gameOver=false;winner=null;breakShot=true;$('status').textContent='Player 1 to break. Aim and pull the power handle, or press SHOOT.';updateHUD()}
 function updateHUD(){renderDirty=true;const left=balls.filter(b=>b.id!==0&&!b.potted).length;$('remaining').textContent=left+' balls left';$('player').textContent=`PLAYER ${turn} · ${groups[turn]?groups[turn].toUpperCase():'OPEN TABLE'}`;$('phase').textContent=gameOver?`PLAYER ${winner} WINS`:shooting?'BALLS MOVING':ballInHand?'BALL IN HAND':breakShot?'READY TO BREAK':'READY TO SHOOT';$('shoot').disabled=shooting||gameOver;$('shoot').textContent=ballInHand?'PLACE CUE':'SHOOT';$('shoot').setAttribute('aria-label',ballInHand?'Confirm cue-ball placement':'Shoot the cue ball');$('shoot').style.opacity=$('shoot').disabled?'.55':'1'}
 const bg=document.createElement('canvas');bg.width=W;bg.height=H;const g=bg.getContext('2d');
@@ -214,7 +221,7 @@ function drawBall(b,orientation=b.rollQ){
   // The stripe axis is attached to the rotating sphere. Its screen-space
   // projection turns and foreshortens the band instead of leaving it painted
   // immobile across a moving ball. Number badges stay upright for legibility.
-  const axis=rollMarker(orientation||[1,0,0,0],[0,1,0]);
+  const axis=rollMarker(orientation||[1,0,0,0],ROLL_STRIPE_AXIS,ROLL_MARKER_OUT);
   const facing=Math.hypot(axis[0],axis[1]);
   const tilt=Math.atan2(axis[1],axis[0])-pi/2;
   ctx.save();ctx.beginPath();ctx.arc(x,y,rad-.35,0,pi*2);ctx.clip();
@@ -229,9 +236,9 @@ function drawBall(b,orientation=b.rollQ){
  // visually observable without moving the table-space specular highlight.
  if(id===0){
   const q=orientation||[1,0,0,0];
-  const marks=[[0,0,1],[0,0,-1],[1,0,0],[-1,0,0],[0,1,0],[0,-1,0]];
+  const marks=ROLL_MEASLE_MARKS;
   for(const mark of marks){
-   const v=rollMarker(q,mark);if(v[2]<=.07)continue;
+   const v=rollMarker(q,mark,ROLL_MARKER_OUT);if(v[2]<=.07)continue;
    ctx.globalAlpha=.48+.32*v[2];ctx.fillStyle='#ad3b42';
    ctx.beginPath();ctx.arc(x+v[0]*rad*.88,y+v[1]*rad*.88,rad*(.095+.025*v[2]),0,pi*2);ctx.fill();
   }
@@ -403,7 +410,7 @@ function resolveSimultaneousContacts(batch,start=0,end=batch.length){
 // the normal cushion pass. Reapply the identical rail/pocket-mouth constraint
 // after object impulses, rather than letting it visibly escape for a frame.
 // The second pass only acts on newly out-of-bounds balls.
-function constrainRail(b){for(let axis of ['x','y']){let pos=b[axis],lo=axis==='x'?L+rad:T+rad,hi=axis==='x'?R-rad:B-rad;if(pos<lo||pos>hi){const closest=axis==='x'?(pos<lo?L:R):(pos<lo?T:B);const cross=axis==='x'?b.y:b.x;const nearPocket=holes.some(([hx,hy])=>axis==='x'?Math.abs(hx-closest)<1&&Math.abs(hy-cross)<pocket*1.2:Math.abs(hy-closest)<12&&Math.abs(hx-cross)<pocket*1.2);if(nearPocket){
+function constrainRail(b){for(let axisIndex=0;axisIndex<2;axisIndex++){const axis=axisIndex===0?'x':'y';let pos=b[axis],lo=axis==='x'?L+rad:T+rad,hi=axis==='x'?R-rad:B-rad;if(pos<lo||pos>hi){const closest=axis==='x'?(pos<lo?L:R):(pos<lo?T:B);const cross=axis==='x'?b.y:b.x;const nearPocket=holes.some(([hx,hy])=>axis==='x'?Math.abs(hx-closest)<1&&Math.abs(hy-cross)<pocket*1.2:Math.abs(hy-closest)<12&&Math.abs(hx-cross)<pocket*1.2);if(nearPocket){
   // A cushion gap is not a pocket: only the circular pocket-well test
   // above may remove a ball. Previously any ball crossing the outer rail
   // within a broad 1.2*pocket mouth band was potted, even when its centre
