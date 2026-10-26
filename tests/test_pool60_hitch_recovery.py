@@ -89,7 +89,7 @@ with sync_playwright() as pw:
         check(label+' first shot after idle pause is not fast-forwarded',
             idle['firstShotTicks']<=3 and idle['finite'],idle)
         for hz in (60,90,144):
-            normal=data['normal'][hz]
+            normal=data['normal'][str(hz)]
             check(label+f' {hz}Hz normal cadence retains 120Hz physics',
                 abs(normal['ticks']-normal['expected'])<=1.5,normal)
             check(label+f' {hz}Hz normal frames avoid catch-up bursts',
