@@ -653,7 +653,17 @@ for(let ci=0;ci<contacts.length;){
   if(unresolved)projectRailContactOverlaps();
  }
 }
-function settled(){return balls.every(b=>b.potted||Math.hypot(b.vx,b.vy)<.022)}
+// Compare squared speed at the exact original 0.022 threshold. Avoid a
+// Math.hypot square root and a new Array.every callback during every moving
+// render frame. Negated comparison preserves NaN/Infinity as NOT settled.
+const SETTLE_SPEED2=.022*.022;
+function settled(){
+ for(const b of balls){
+  if(b.potted)continue;
+  if(!(b.vx*b.vx+b.vy*b.vy<SETTLE_SPEED2))return false;
+ }
+ return true;
+}
 // A brief 100-250ms render stall must not erase shot motion. Carry bounded
 // 120Hz simulation debt into later callbacks rather than discarding elapsed
 // time; limit each callback to eight physics ticks to avoid a catch-up burst.
