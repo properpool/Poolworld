@@ -64,6 +64,13 @@ function reflectCushion(b,nx,ny,restitution,friction){
   return true;
 }
 function collideJaw(b){
+  // Every rubber nose lies on a cushion edge. A ball wholly inside this
+  // inner rectangle cannot intersect any expanded jaw circle. Avoid twelve
+  // per-ball nose checks on each 120Hz physics tick during central play;
+  // preserve the exact original narrow-phase for rail-side and jaw contacts.
+  const jawReach=rad+jawRadius;
+  if(b.x>=L+jawReach&&b.x<=R-jawReach&&
+     b.y>=T+jawReach&&b.y<=B-jawReach)return;
   for(const [jx,jy] of jaws){
     let dx=b.x-jx,dy=b.y-jy,dist2=dx*dx+dy*dy;
     const min=rad+jawRadius;
