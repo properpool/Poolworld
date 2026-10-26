@@ -60,7 +60,7 @@ function reflectCushion(b,nx,ny,restitution,friction){
   const tangentImpulse=Math.max(-maxTangent,Math.min(maxTangent,-slip/3.5));
   b.vx+=tangentImpulse*tx;b.vy+=tangentImpulse*ty;
   b.spin-=2.5*tangentImpulse;
-  if(-vn>.06){events.push(['rail',Math.min(1,-vn/5)]);if(shot&&shot.firstHit!==null)shot.railAfterContact=true;}
+  if(-vn>.06){queueSound('rail',Math.min(1,-vn/5));if(shot&&shot.firstHit!==null)shot.railAfterContact=true;}
   return true;
 }
 function collideJaw(b){
@@ -85,6 +85,17 @@ function collideJaw(b){
 
 const colors=['#f6f1e8','#f2d34b','#286bc4','#d34345','#6e46a5','#e98b3b','#35834a','#7b352e','#181d22','#e3c343','#275db1','#d44b55','#784e9b','#e58b35','#2d8451','#7a4032'];
 let balls=[],aim=-Math.PI/2,dragAim=false,shooting=false,power=45,powerDrag=false,powerY=0,spin=0,follow=0,guide=true,history=null,events=[],lastSound={},soundOn=true;
+// Busy 120Hz shots emit rail, ball and pocket sound events every tick.
+// Reuse two-element records across frames without changing event ordering,
+// payloads, the recorded sounds, or the legacy [kind, intensity] queue API.
+const soundEventPool=[];
+function queueSound(kind,intensity){
+ const slot=events.length;
+ let record=soundEventPool[slot];
+ if(!record){record=[kind,intensity];soundEventPool.push(record)}
+ else{record[0]=kind;record[1]=intensity}
+ events.push(record);
+}
 let turn=1,groups={1:null,2:null},ballInHand=false,gameOver=false,winner=null,breakShot=true,shot=null;
 const opponent=p=>p===1?2:1;
 const groupOf=id=>id>=1&&id<=7?'solids':id>=9&&id<=15?'stripes':null;
@@ -93,7 +104,7 @@ function canPlace(x,y){return Number.isFinite(x)&&Number.isFinite(y)&&x>=L+rad+2
 function cuePosition(){const x0=L+(R-L)*.24,y0=(T+B)/2;if(canPlace(x0,y0))return [x0,y0];for(let y=T+rad+6;y<=B-rad-6;y+=rad*2.3)for(let x=L+rad+6;x<=R-rad-6;x+=rad*2.3)if(canPlace(x,y))return [x,y];return [x0,y0]}
 function snapshot(){return {balls:balls.map(b=>({...b,rollQ:b.rollQ?[...b.rollQ]:[1,0,0,0]})),turn,groups:{...groups},ballInHand,gameOver,winner,breakShot,aim,power,spin,follow}}
 function restore(state){balls=state.balls.map(b=>({...b,rollQ:b.rollQ?[...b.rollQ]:[1,0,0,0]}));turn=state.turn;groups={...state.groups};ballInHand=state.ballInHand;gameOver=state.gameOver;winner=state.winner;breakShot=state.breakShot;aim=state.aim;power=state.power??power;spin=state.spin??spin;follow=state.follow??follow;shooting=false;shot=null;events.length=0;accumulator=0;showPower(power);$('spin').value=spin;$('follow').value=follow;updateHUD()}
-function pocketBall(b){if(b.potted)return;b.potted=true;b.vx=b.vy=0;if(shot){shot.pocketed.push(b.id);if(b.id===0)shot.scratch=true}events.push(['pocket',.85])}
+function pocketBall(b){if(b.potted)return;b.potted=true;b.vx=b.vy=0;if(shot){shot.pocketed.push(b.id);if(b.id===0)shot.scratch=true}queueSound('pocket',.85)}
 function resolveShot(){if(!shot)return;const s=shot;shot=null;shooting=false;
 // The whole table has settled. A frozen side-spin or follow value must not
 // survive the turn and alter a later collision on a stationary object ball.
@@ -369,7 +380,7 @@ function resolveSimultaneousContacts(batch,start=0,end=batch.length){
   ca.vx-=j*p.nx;ca.vy-=j*p.ny;cb.vx+=j*p.nx;cb.vy+=j*p.ny;
   const push=p.overlap*.51;
   ca.x-=push*p.nx;ca.y-=push*p.ny;cb.x+=push*p.nx;cb.y+=push*p.ny;
-  if(Math.abs(p.rel)>.11)events.push(['ball',Math.abs(p.rel)/5]);
+  if(Math.abs(p.rel)>.11)queueSound('ball',Math.abs(p.rel)/5);
  }
  for(const b of members){const c=change.get(b);b.vx+=c.vx;b.vy+=c.vy;b.x+=c.x;b.y+=c.y}
  // Tangential impulses are also sampled simultaneously, preserving symmetry.
@@ -572,7 +583,7 @@ for(let ci=0;ci<contacts.length;){
  a.vx-=tangentImpulse*tx;a.vy-=tangentImpulse*ty;
  b.vx+=tangentImpulse*tx;b.vy+=tangentImpulse*ty;
  a.spin-=2.5*tangentImpulse;b.spin-=2.5*tangentImpulse;
- if(Math.abs(rel)>.11)events.push(['ball',Math.abs(rel)/5]);
+ if(Math.abs(rel)>.11)queueSound('ball',Math.abs(rel)/5);
  if(a.id===0&&Math.abs(a.follow)>.1){
   // Follow/draw uses stored longitudinal rotation, not a free velocity kick.
   // Spend no more rotational energy than is released at impact (I/m*r²=.4).
