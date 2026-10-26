@@ -565,19 +565,34 @@ for(let i=0;i<balls.length;i++){
  for(let j=i+1;j<balls.length;j++){
   const b=balls[j];if(b.potted)continue;
   const ex=b.x-a.x,ey=b.y-a.y,min=2*rad;
-  if(ex*ex+ey*ey>=min*min)continue;
+  const overlap=ex*ex+ey*ey<min*min;
   const sx=before[j][0]-before[i][0],sy=before[j][1]-before[i][1];
   const dx=ex-sx,dy=ey-sy,c=sx*sx+sy*sy-min*min;
-  let t=1;
-  if(c<=0)t=0;
+  // A fast, shallow contact can ENTER and EXIT the ball's contact circle
+  // within one 120Hz tick. Both endpoints then appear non-overlapping:
+  // ignoring the swept path makes a real glancing hit pass straight through.
+  // Cheap swept AABB rejection keeps distant full-rack pairs off this path.
+  if(!overlap&&(Math.abs(ex)>min+Math.abs(dx)||
+                Math.abs(ey)>min+Math.abs(dy)))continue;
+  let t=1,swept=false,nx=0,ny=0;
+  if(c<=0){if(!overlap)continue;t=0}
   else{
    const qa=dx*dx+dy*dy,qb=2*(sx*dx+sy*dy),disc=qb*qb-4*qa*c;
-   if(qa>1e-12&&qb<0&&disc>=0)t=Math.max(0,Math.min(1,(-qb-Math.sqrt(disc))/(2*qa)));
+   if(qa>1e-12&&qb<0&&disc>=0){
+    const entry=(-qb-Math.sqrt(disc))/(2*qa);
+    if(entry>=0&&entry<=1)t=entry;
+   }
+   if(!overlap){
+    if(t>=1)continue;
+    const hx=sx+dx*t,hy=sy+dy*t,len=Math.hypot(hx,hy);
+    if(len<1e-8)continue;
+    nx=hx/len;ny=hy/len;swept=true;
+   }
   }
   const slot=contacts.length;
   let contact=contactPool[slot];
-  if(!contact){contact={a,b,t};contactPool.push(contact)}
-  else{contact.a=a;contact.b=b;contact.t=t}
+  if(!contact){contact={a,b,t,swept,nx,ny};contactPool.push(contact)}
+  else{contact.a=a;contact.b=b;contact.t=t;contact.swept=swept;contact.nx=nx;contact.ny=ny}
   contacts.push(contact);
  }
 }
@@ -589,16 +604,25 @@ for(let ci=0;ci<contacts.length;){
  // impacts from a tight cluster using the coupled solver rather than
  // letting a tiny finger-angle or rack-offset difference arbitrarily
  // choose the first impulse. Wider-separated impacts remain sequential.
- while(end<contacts.length&&Math.abs(contacts[end].t-current.t)<.012)end++;
+ while(end<contacts.length&&!current.swept&&!contacts[end].swept&&
+       Math.abs(contacts[end].t-current.t)<.012)end++;
  if(end-ci>1&&resolveSimultaneousContacts(contacts,ci,end)){ci=end;continue}
  ci++;
  const {a,b}=current;
  if(a.potted||b.potted)continue;
- let dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy,min=rad*2;if(d2>=min*min)continue;let d=Math.sqrt(d2),nx,ny;
+ let dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy,min=rad*2;
+ if(d2>=min*min&&!current.swept)continue;
+ let d=Math.sqrt(d2),nx,ny;
+ // For a swept-only grazing contact, the final positions have already
+ // separated. Apply the normal impulse at the true swept entry normal,
+ // WITHOUT inventing positional overlap or snapping either ball backwards.
+ if(current.swept){nx=current.nx;ny=current.ny}
  // An exact centre overlap must separate; use relative motion as a stable normal.
- if(d<1e-6){const rvx=b.vx-a.vx,rvy=b.vy-a.vy,rv=Math.hypot(rvx,rvy);nx=rv>1e-8?-rvx/rv:1;ny=rv>1e-8?-rvy/rv:0;d=0}
+ else if(d<1e-6){const rvx=b.vx-a.vx,rvy=b.vy-a.vy,rv=Math.hypot(rvx,rvy);nx=rv>1e-8?-rvx/rv:1;ny=rv>1e-8?-rvy/rv:0;d=0}
  else{nx=dx/d;ny=dy/d}
- const overlap=min-d;const correction=overlap*.51;a.x-=nx*correction;a.y-=ny*correction;b.x+=nx*correction;b.y+=ny*correction;const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(rel>=0)continue;if(shot&&shot.firstHit===null&&(a.id===0||b.id===0))shot.firstHit=a.id===0?b.id:a.id;// Equal-mass normal impulse, coefficient of restitution 0.955.
+ const overlap=current.swept?0:min-d;const correction=overlap*.51;
+ a.x-=nx*correction;a.y-=ny*correction;b.x+=nx*correction;b.y+=ny*correction;
+ const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(rel>=0)continue;if(shot&&shot.firstHit===null&&(a.id===0||b.id===0))shot.firstHit=a.id===0?b.id:a.id;// Equal-mass normal impulse, coefficient of restitution 0.955.
  const cueIncomingX=a.vx,cueIncomingY=a.vy;
  const impulse=-(1+.955)*rel/2;a.vx-=impulse*nx;a.vy-=impulse*ny;b.vx+=impulse*nx;b.vy+=impulse*ny;
  const tx=-ny,ty=nx;
