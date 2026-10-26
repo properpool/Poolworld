@@ -236,7 +236,23 @@ function drawBall(b){
   ctx.fillStyle='#20252a';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 10px Arial';ctx.fillText(id,x,y+.35);
  }
 }
-function render(){ctx.clearRect(0,0,W,H);ctx.drawImage(bg,0,0);if(!shooting&&!gameOver&&!ballInHand&&!balls[0].potted){drawAim()}for(const b of balls)drawBall(b);if(ballInHand){ctx.save();ctx.strokeStyle='#ffdb79';ctx.lineWidth=3;ctx.setLineDash([6,6]);ctx.beginPath();ctx.arc(balls[0].x,balls[0].y,rad+7,0,pi*2);ctx.stroke();ctx.restore()}}
+// Physics advances in fixed 120Hz ticks. A 90/144Hz display otherwise
+// alternates between one/two or zero/one ticks per canvas draw, visibly
+// juddering even when physics and rendering individually run quickly.
+// Interpolate ONLY the drawing coordinates, never the authoritative state.
+let interpolateVisual=false;
+function render(){ctx.clearRect(0,0,W,H);ctx.drawImage(bg,0,0);if(!shooting&&!gameOver&&!ballInHand&&!balls[0].potted){drawAim()}
+ const blend=interpolateVisual&&shooting&&beforePositions.length===balls.length;
+ const alpha=blend?Math.max(0,Math.min(1,accumulator/STEP)):1;
+ for(let i=0;i<balls.length;i++){
+  const b=balls[i],p=blend?beforePositions[i]:null;
+  if(!p||b.potted){drawBall(b);continue}
+  const x=b.x,y=b.y;
+  b.x=p[0]+(x-p[0])*alpha;b.y=p[1]+(y-p[1])*alpha;
+  drawBall(b);
+  b.x=x;b.y=y;
+ }
+ if(ballInHand){ctx.save();ctx.strokeStyle='#ffdb79';ctx.lineWidth=3;ctx.setLineDash([6,6]);ctx.beginPath();ctx.arc(balls[0].x,balls[0].y,rad+7,0,pi*2);ctx.stroke();ctx.restore()}}
 function drawAim(){const c=balls[0],dx=Math.cos(aim),dy=Math.sin(aim);if(guide){ctx.setLineDash([9,8]);ctx.lineWidth=2.4;ctx.strokeStyle='#f7f5dcdd';ctx.beginPath();ctx.moveTo(c.x+dx*rad,c.y+dy*rad);let hit=900,object=null;for(let b of balls){if(b.id===0||b.potted)continue;const ox=b.x-c.x,oy=b.y-c.y,proj=ox*dx+oy*dy,perp2=ox*ox+oy*oy-proj*proj;if(proj>0&&perp2<(2*rad)**2){let d=proj-Math.sqrt((2*rad)**2-perp2);if(d<hit){hit=d;object=b}}}if(!object){const tx=dx>0?(R-rad-c.x)/dx:(L+rad-c.x)/dx,ty=dy>0?(B-rad-c.y)/dy:(T+rad-c.y)/dy;hit=Math.min(tx>0?tx:900,ty>0?ty:900)}ctx.lineTo(c.x+dx*hit,c.y+dy*hit);ctx.stroke();ctx.setLineDash([]);if(object){const hx=c.x+dx*hit,hy=c.y+dy*hit;ctx.strokeStyle='#ffffff80';ctx.beginPath();ctx.arc(hx,hy,rad,0,pi*2);ctx.stroke();const nx=(object.x-hx)/(2*rad),ny=(object.y-hy)/(2*rad);ctx.strokeStyle='#ffe1a6bb';ctx.setLineDash([4,5]);ctx.beginPath();ctx.moveTo(object.x,object.y);ctx.lineTo(object.x+nx*100,object.y+ny*100);ctx.stroke();ctx.setLineDash([])}}ctx.save();ctx.translate(c.x,c.y);ctx.rotate(aim);ctx.strokeStyle='#17110d';ctx.lineWidth=14;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-rad-19,0);ctx.lineTo(-250,0);ctx.stroke();const shaft=ctx.createLinearGradient(0,-5,0,5);shaft.addColorStop(0,'#f4db9b');shaft.addColorStop(.5,'#bd8140');shaft.addColorStop(1,'#6b3d1d');ctx.strokeStyle=shaft;ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(-rad-19,0);ctx.lineTo(-245,0);ctx.stroke();ctx.strokeStyle='#e8e4d8';ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(-rad-19,0);ctx.lineTo(-rad-29,0);ctx.stroke();ctx.restore()}
 // Physics: fixed 120Hz steps; translational and rotational impulses bounded.
 const STEP=1/120;let accumulator=0,last=0,renderDirty=true;
@@ -538,7 +554,7 @@ for(let ci=0;ci<contacts.length;){
  }
 }
 function settled(){return balls.every(b=>b.potted||Math.hypot(b.vx,b.vy)<.022)}
-function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.0833)):0;last=t;accumulator+=elapsed;let n=0;while(accumulator>=STEP&&n++<11){if(shooting)physics(STEP);accumulator-=STEP}if(shooting){for(let i=0;i<Math.min(events.length,8);i++){const [kind,v]=events[i];sound(kind,v)}events.length=0;if(settled())resolveShot()}if(shooting||renderDirty){render();renderDirty=false}requestAnimationFrame(frame)}
+function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.0833)):0;last=t;accumulator+=elapsed;let n=0;while(accumulator>=STEP&&n++<11){if(shooting)physics(STEP);accumulator-=STEP}if(shooting){for(let i=0;i<Math.min(events.length,8);i++){const [kind,v]=events[i];sound(kind,v)}events.length=0;if(settled())resolveShot()}if(shooting||renderDirty){interpolateVisual=shooting;render();interpolateVisual=false;renderDirty=false}requestAnimationFrame(frame)}
 // Calibrated to table dimensions: mid-power shots must cross the table,
 // while short finesse shots remain possible. This is a gameplay tuning curve,
 // not a measurement of a real cue's impulse.
@@ -546,7 +562,15 @@ function shotSpeed(level,isBreak=breakShot){
  const p=Math.max(5,Math.min(100,level))/100;
  return (.45+7.9*Math.pow(p,.92))*(isBreak?1.17:1);
 }
-function shoot(){if(shooting||gameOver||ballInHand||balls[0].potted)return false;history=snapshot();shot={player:turn,breakShot,firstHit:null,railAfterContact:false,pocketed:[],scratch:false,targetEight:groups[turn]!==null&&remainingFor(turn)===0};const b=balls[0],speed=shotSpeed(power,breakShot);b.vx=Math.cos(aim)*speed;b.vy=Math.sin(aim)*speed;b.spin=spin/100*1.2;b.follow=follow/100*2.5;shooting=true;events.length=0;sound('cue',Math.max(.3,power/90));updateHUD();$('status').textContent='Shot in progress…';return true}
+function shoot(){if(shooting||gameOver||ballInHand||balls[0].potted)return false;history=snapshot();shot={player:turn,breakShot,firstHit:null,railAfterContact:false,pocketed:[],scratch:false,targetEight:groups[turn]!==null&&remainingFor(turn)===0};const b=balls[0],speed=shotSpeed(power,breakShot);b.vx=Math.cos(aim)*speed;b.vy=Math.sin(aim)*speed;b.spin=spin/100*1.2;b.follow=follow/100*2.5;shooting=true;
+ // The first rendered shot frame can precede its first physics tick.
+ // Seed previous positions now, so it cannot interpolate from an old rack.
+ beforePositions.length=balls.length;
+ for(let i=0;i<balls.length;i++){
+  const p=beforePositions[i]||(beforePositions[i]=[0,0]);
+  p[0]=balls[i].x;p[1]=balls[i].y;
+ }
+ events.length=0;sound('cue',Math.max(.3,power/90));updateHUD();$('status').textContent='Shot in progress…';return true}
 function pointerCoords(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
 let lastAim=aim,precisionAim=false,aimPointer=null,aimStartX=0,aimStartAngle=0,aimFineDrag=false;
 function nearCueTouch(e){
