@@ -44,7 +44,8 @@ with sync_playwright() as pw:
    check(tag+' stroke geometry clamps power and stays finite',geometry['valuesFinite'] and abs(geometry['invalid'][0]-rest[0])<6 and abs(geometry['invalid'][1]-rest[2])<6,geometry)
   visual=page.evaluate("""() => {
     rack();balls=[makeBall(0,300,285)];breakShot=false;aim=0;
-    showPower(90);
+    renderDirty=false;showPower(90);
+    const invalidated=renderDirty;
     if(typeof drawCue!=='function')return {available:false};
     const original=drawCue,seen=[];
     drawCue=function(x,y,a,p,phase){seen.push({x,y,a,p,phase});return original.apply(this,arguments)};
@@ -56,7 +57,7 @@ with sync_playwright() as pw:
     for(let i=2;i<=12;i++)frame(1000+i*1000/60);
     const ended=cueStrike===null,lateStart=seen.length;
     render();const late=seen.slice(lateStart);
-    const result={available:true,idle,onShot,early,elapsed,ended,late,
+    const result={available:true,invalidated,idle,onShot,early,elapsed,ended,late,
       fired,expected,velocity,shooting,shotPower:power,
       cueBall:{x:balls[0].x,y:balls[0].y},
       renderDirty,physicsValid:balls[0].x>300};
@@ -65,6 +66,7 @@ with sync_playwright() as pw:
   }""")
   check(tag+' cue appears in aiming and first shot frame',visual.get('available') and len(visual.get('idle',[]))==1 and len(visual.get('onShot',[]))==1,visual)
   if visual.get('available'):
+   check(tag+' changing shot power invalidates the live cue drawing',visual['invalidated'],visual)
    check(tag+' first impact cue preserves selected power and original origin',
      len(visual['onShot'])==1 and visual['onShot'][0]['p']==90 and visual['onShot'][0]['x']==300,visual)
    check(tag+' cue stroke advances across actual moving frames',
