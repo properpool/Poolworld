@@ -154,6 +154,8 @@ jobs:
         run: python tests/test_pool60_lowfps_motion.py
       - name: Captured off-table mouse and touch drags preserve direct cue aim
         run: python tests/test_pool60_offtable_aim_drag.py
+      - name: Sustained 6-9fps cue-shot physics and isolated hitch safety (four viewports)
+        run: python tests/test_pool60_sub10fps_motion.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
