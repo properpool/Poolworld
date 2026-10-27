@@ -318,12 +318,16 @@ function drawBall(b,orientation=b.rollQ){
  if(id===0){
   const q=orientation||[1,0,0,0];
   const marks=ROLL_MEASLE_MARKS;
+  // A pocket-sink ghost fades its entire cue-ball surface. Respect the
+  // incoming canvas opacity for each measle dot, then restore that opacity:
+  // overwriting it with 1 left bright red dots hovering in a dark pocket.
+  const surfaceAlpha=ctx.globalAlpha;
   for(const mark of marks){
    const v=rollMarker(q,mark,ROLL_MARKER_OUT);if(v[2]<=.07)continue;
-   ctx.globalAlpha=.48+.32*v[2];ctx.fillStyle='#ad3b42';
+   ctx.globalAlpha=surfaceAlpha*(.48+.32*v[2]);ctx.fillStyle='#ad3b42';
    ctx.beginPath();ctx.arc(x+v[0]*rad*.88,y+v[1]*rad*.88,rad*(.095+.025*v[2]),0,pi*2);ctx.fill();
   }
-  ctx.globalAlpha=1;
+  ctx.globalAlpha=surfaceAlpha;
  }
  if(id){
   ctx.fillStyle='#fdfaf0';ctx.beginPath();ctx.arc(x,y,rad*.47,0,pi*2);ctx.fill();
