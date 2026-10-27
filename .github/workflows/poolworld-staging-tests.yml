@@ -148,6 +148,8 @@ jobs:
         run: python tests/test_pool60_swept_pocket.py
       - name: Power-handle and panel-margin tap safety across four viewports
         run: python tests/test_pool60_power_tap_safety.py
+      - name: Two-axis cue-side thumb aiming and shot direction (four viewports)
+        run: python tests/test_pool60_fine_aim_2d.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
