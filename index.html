@@ -937,6 +937,12 @@ canvas.addEventListener('pointerup',finishAim);canvas.addEventListener('pointerc
 canvas.addEventListener('lostpointercapture',finishAim);
 const track=$('track');let powerPointer=null,powerStart=45,powerMoved=false,powerTapOnBareTrack=false;
 function showPower(p){const next=Math.max(5,Math.min(100,p));if(next!==power)renderDirty=true;power=next;$('strength').value=power;$('powerValue').textContent=Math.round(power)+'%';const h=track.clientHeight;const y=(power-5)/95*(h-22)+11;$('handle').style.top=y+'px';$('fill').style.height=y+'px'}
+// The selected power is authoritative; the thumb position is only a projection
+// of that value onto the CURRENT track height. Browser chrome, rotation and
+// the portrait BIG TABLE layout can change the track without a power gesture.
+// Reflow the thumb and fill without changing shotSpeed, shot state or power.
+const powerTrackResizeObserver=new ResizeObserver(()=>showPower(power));
+powerTrackResizeObserver.observe(track);
 function padStart(e){if(shooting||gameOver||ballInHand||powerDrag)return;
  // Side margins are an intentional larger thumb target, but the POWER label
  // and PULL DOWN instruction are not. A tap there must never reset strength.
@@ -1068,6 +1074,9 @@ function setTableFocus(active){
  overlay.classList.toggle('active',active);
  overlay.setAttribute('aria-hidden',String(!active));
  $('focusMode').hidden=active;$('exitFocus').hidden=!active;
+ // Reparenting changes track height synchronously; align the thumb before
+ // the first focused render rather than waiting for ResizeObserver delivery.
+ showPower(power);
  document.documentElement.style.overflow=active?'hidden':'';
  document.body.style.overflow=active?'hidden':'';
  renderDirty=true;render();
