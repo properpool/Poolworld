@@ -184,6 +184,8 @@ jobs:
         run: python tests/test_pool60_gesture_transition.py
       - name: Held fine-aim gesture transaction safety across reset, undo and shoot
         run: python tests/test_pool60_fine_aim_transaction.py
+      - name: Explicit SHOOT retires held aim, power and queued touchscreen gestures
+        run: python tests/test_pool60_shoot_gesture_retirement.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
