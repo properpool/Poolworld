@@ -132,7 +132,7 @@ with sync_playwright() as pw:
             send(cdp,'touchStart',[(1,a)])
             send(cdp,'touchStart',[(1,a),(2,p)])
             send(cdp,'touchMove',[(1,a),(2,end)])
-            send(cdp,'touchEnd',[(1,a)])
+            send(cdp,'touchEnd',[(2,end)])
             queued=state(page)
             check(label+' two-finger fixture queues shot',queued['queued'] and
                   not queued['shooting'],queued)
