@@ -170,6 +170,8 @@ jobs:
         run: python tests/test_pool60_bank_aim_preview.py
       - name: Cue power pullback, impact stroke and unchanged physics (four viewports)
         run: python tests/test_pool60_cue_stroke_feedback.py
+      - name: BIG TABLE power thumb alignment after focus and responsive reflow
+        run: python tests/test_pool60_focus_power_reflow.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
