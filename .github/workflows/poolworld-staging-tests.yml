@@ -190,6 +190,8 @@ jobs:
         run: python tests/test_pool60_near_edge_aim_release.py
       - name: Pocketed ball sink animation and match-state integrity across four viewports
         run: python tests/test_pool60_pocket_sink_visual.py
+      - name: Scratched cue ball sink measle dots fade with shell (four viewports)
+        run: python tests/test_pool60_cue_scratch_fade.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
