@@ -81,15 +81,15 @@ with sync_playwright() as pw:
         check(label+' touch outside release does not shoot or stick',
               not ended['dragAim'] and ended['aimPointer'] is None
               and not ended['shooting'],ended)
-        # Crossing the bottom edge is also out of bounds; direct aim must
+        # Crossing the top edge is also out of bounds; direct aim must
         # ignore that move, independently of the right-edge scenario.
         page.evaluate('rack();aim=0')
         page.mouse.move(x0,y0)
         page.mouse.down()
         page.mouse.move(xi,yi)
         inside=page.evaluate('aim')
-        page.mouse.move(xi,box['y']+box['height']+32)
-        check(label+' bottom-edge direct drag preserves aim',
+        page.mouse.move(xi,box['y']-24)
+        check(label+' top-edge direct drag preserves aim',
               diff(page.evaluate('aim'),inside)<1e-8)
         page.mouse.up()
         check(label+' no browser errors',not errors,errors)
