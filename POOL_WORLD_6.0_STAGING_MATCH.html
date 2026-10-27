@@ -936,7 +936,7 @@ canvas.addEventListener('pointerup',finishAim);canvas.addEventListener('pointerc
 // Treat that as an interrupted gesture, restoring aim and unlocking touch.
 canvas.addEventListener('lostpointercapture',finishAim);
 const track=$('track');let powerPointer=null,powerStart=45,powerMoved=false,powerTapOnBareTrack=false;
-function showPower(p){power=Math.max(5,Math.min(100,p));$('strength').value=power;$('powerValue').textContent=Math.round(power)+'%';const h=track.clientHeight;const y=(power-5)/95*(h-22)+11;$('handle').style.top=y+'px';$('fill').style.height=y+'px'}
+function showPower(p){const next=Math.max(5,Math.min(100,p));if(next!==power)renderDirty=true;power=next;$('strength').value=power;$('powerValue').textContent=Math.round(power)+'%';const h=track.clientHeight;const y=(power-5)/95*(h-22)+11;$('handle').style.top=y+'px';$('fill').style.height=y+'px'}
 function padStart(e){if(shooting||gameOver||ballInHand||powerDrag)return;
  // Side margins are an intentional larger thumb target, but the POWER label
  // and PULL DOWN instruction are not. A tap there must never reset strength.
