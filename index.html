@@ -707,16 +707,21 @@ function settled(){
  return true;
 }
 // Preserve transient render hitches without an unbounded catch-up burst.
-// At sustained 10-12fps, eight ticks per 100ms process only 2/3 of the
-// 120Hz motion, making every shot visibly slow. After TWO consecutive
-// 75-125ms gaps, permit real-time ticks plus up to two debt-recovery ticks,
-// capped at 15. One-off 100ms GC stalls and 150-250ms hitches retain the
-// original eight-tick safety budget. Idle frames owe no simulation time.
+// Sustained 6-12fps otherwise processes too few 120Hz physics steps per
+// wall-second, making shots visibly slow (at 8fps, 8/15 steps per frame).
+// After TWO consecutive 75-175ms gaps, allow real-time steps plus up to
+// two debt-recovery steps, capped at 22. A lone 100-200ms GC/browser hitch
+// retains the original eight-step safety limit. Idle owes no simulation time.
+// This preserves shot speed, NOT visual smoothness at a genuinely low FPS.
 function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.25)):0;last=t;if(shooting){
- accumulator=Math.min(.25,accumulator+elapsed);
- slowFrameStreak=elapsed>=.075&&elapsed<=.125?Math.min(3,slowFrameStreak+1):0;
+ slowFrameStreak=elapsed>=.075&&elapsed<=.175?Math.min(3,slowFrameStreak+1):0;
+ // The first 6fps callback retains ~100ms of unprocessed simulation.
+ // A 250ms cap on the second callback silently discards 16.7ms of play.
+ // Allow 300ms ONLY after sustained low-FPS is established; isolated hitches
+ // retain the original 250ms debt ceiling and eight-step CPU safety budget.
+ accumulator=Math.min(slowFrameStreak>=2?.30:.25,accumulator+elapsed);
  }else{accumulator=0;slowFrameStreak=0}
- const tickBudget=slowFrameStreak>=2?Math.min(15,Math.ceil(elapsed/STEP)+2):8;
+ const tickBudget=slowFrameStreak>=2?Math.min(22,Math.ceil(elapsed/STEP)+2):8;
  let n=0;while(shooting&&accumulator>=STEP&&n<tickBudget){physics(STEP);accumulator-=STEP;n++}if(shooting){for(let i=0;i<Math.min(events.length,8);i++){const [kind,v]=events[i];sound(kind,v)}events.length=0;if(settled())resolveShot()}if(shooting||renderDirty){interpolateVisual=shooting;render();interpolateVisual=false;renderDirty=false}requestAnimationFrame(frame)}
 // Calibrated to table dimensions: mid-power shots must cross the table,
 // while short finesse shots remain possible. This is a gameplay tuning curve,
