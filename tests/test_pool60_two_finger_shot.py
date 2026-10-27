@@ -97,8 +97,9 @@ with sync_playwright() as pw:
             touch(cdp,'touchMove',[(1,screen(page,700,335))])
             touch(cdp,'touchMove',[(1,aim2)])
             final=state(page)
-            check(tag+' aim can still move after power finger lifts',
-                  not final['shooting'] and final['aim']>held['aim']+.025,
+            check(tag+' shot stays queued while the aiming finger moves',
+                  not final['shooting'] and final['queued'] is True and
+                  final['aimPointer'] is not None,
                   {'held':held,'final':final})
             touch(cdp,'touchEnd',[(1,aim2)])
             fired=state(page)
@@ -106,9 +107,12 @@ with sync_playwright() as pw:
                   fired['shooting'] and fired['aimPointer'] is None and
                   fired['queued'] is False and fired['strikePower']>70,
                   fired)
+            expected_angle=math.atan2(355-285,700-340)
             check(tag+' shot direction uses final aiming finger position',
-                  fired['shooting'] and abs(math.atan2(fired['vy'],fired['vx'])-final['aim'])<1e-7,
-                  {'fired':fired,'final':final})
+                  fired['shooting'] and
+                  abs(math.atan2(fired['vy'],fired['vx'])-expected_angle)<.002 and
+                  abs(math.atan2(fired['vy'],fired['vx'])-held['aim'])>.04,
+                  {'fired':fired,'final':final,'expectedAngle':expected_angle})
             check(tag+' queued shot preserves calibrated impulse and resets slider',
                   fired['shooting'] and abs(fired['impulse']-page.evaluate('shotSpeed(cueStrike.power,false)'))<1e-8
                   and fired['power']==45, fired)
