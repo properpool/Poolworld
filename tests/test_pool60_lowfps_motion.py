@@ -53,6 +53,25 @@ with sync_playwright() as pw:
                 data['debt']<2/120,data)
             check(f'{label} {fps}fps bounded work per callback',
                 data['maxTicks']<=15 and data['minTicks']>=0,data)
+        # A one-off 100ms GC/browser stall must NOT be misclassified as
+        # sustained 10fps and trigger a 12-14 tick single-frame burst.
+        isolated=page.evaluate("""()=>{
+            const oldPhysics=physics,oldRender=render,oldSettled=settled;
+            let ticks=0;physics=()=>{ticks++};render=()=>{};settled=()=>false;
+            try{
+                rack();shooting=true;last=1000;accumulator=0;
+                frame(1100);const first=ticks;
+                frame(1100+1000/60);const second=ticks-first;
+                return {first,second,debt:accumulator};
+            }finally{
+                physics=oldPhysics;render=oldRender;settled=oldSettled;
+                shooting=false;accumulator=0;
+            }
+        }""")
+        check(f'{label} isolated 100ms stall retains eight-tick safety limit',
+            isolated['first']<=8,isolated)
+        check(f'{label} isolated 100ms stall catches up at 60fps',
+            isolated['second']<=8 and isolated['debt']<2/120,isolated)
         # A single 150ms hitch should still be amortised, not forced
         # through all 18 simulation steps in one rendering callback.
         hitch=page.evaluate("""()=>{
