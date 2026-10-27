@@ -46,12 +46,14 @@ with sync_playwright() as pw:
             page.set_content(HTML,wait_until='load')
             cdp=page.context.new_cdp_session(page) if mode=='touch' else None
             for selector,sign in (('#aimLeft',-1),('#aimRight',1)):
-                x,y=target(page,selector)
                 label=f'{w}x{h} {mode} {selector}'
                 for action in ('rack','restore','shoot'):
                     reset(page)
                     if action=='restore':
                         page.evaluate('''()=>{aim=.7;window.savedFineAimSnapshot=snapshot();aim=0}''')
+                    # Reset/restore and earlier taps can change scroll position on narrow screens.
+                    # Recompute viewport coordinates for each genuine pointer gesture.
+                    x,y=target(page,selector)
                     down(page,cdp,x,y)
                     page.wait_for_timeout(360)
                     held=angle(page)
@@ -79,6 +81,7 @@ with sync_playwright() as pw:
                         page.evaluate('''()=>Math.abs(power-65)<1e-8&&!shooting&&
                             (shot===null)&&!pendingAimReleaseShot'''))
                     # The next deliberate short tap must remain functional.
+                    x,y=target(page,selector)
                     down(page,cdp,x,y)
                     up(page,cdp)
                     fresh=angle(page)
