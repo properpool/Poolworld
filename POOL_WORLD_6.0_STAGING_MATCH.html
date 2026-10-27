@@ -862,11 +862,12 @@ function powerFromDrag(dy,initial,height){
  return dy>=0?initial+(100-initial)*fraction:initial-(initial-5)*fraction;
 }
 function powerGestureY(e){return focusActive?-e.clientX:e.clientY}
+function powerTrackLength(){return focusActive?track.clientHeight:track.getBoundingClientRect().height}
 function padMove(e){if(!powerDrag||e.pointerId!==powerPointer)return;e.preventDefault();
  const dy=powerGestureY(e)-powerY;
  if(Math.abs(dy)>5)powerMoved=true;
  if(Math.abs(dy)<=5&&powerMoved){showPower(powerStart);return}
- if(Math.abs(dy)>5)showPower(powerFromDrag(dy,powerStart,track.clientHeight));
+ if(Math.abs(dy)>5)showPower(powerFromDrag(dy,powerStart,powerTrackLength()));
 }
 function padEnd(e){if(!powerDrag||e.pointerId!==powerPointer)return;
  const dy=powerGestureY(e)-powerY,prior=powerStart,trackTap=powerTapOnBareTrack;
@@ -882,7 +883,7 @@ function padEnd(e){if(!powerDrag||e.pointerId!==powerPointer)return;
   // omitting pointermove entirely. Use the FINAL release coordinate to set
   // the actual impulse, otherwise a full pull fires at stale default power.
   const r=track.getBoundingClientRect();
-  showPower(powerFromDrag(dy,prior,track.clientHeight));
+  showPower(powerFromDrag(dy,prior,powerTrackLength()));
   // Small pulls adjust power without unexpectedly releasing a weak shot.
   // SHOOT remains available for any chosen finesse strength.
   if(dy>=Math.max(42,track.clientHeight*.4)){if(shoot())showPower(45)}
@@ -943,6 +944,9 @@ function setTableFocus(active){
 }
 $('focusMode').onclick=()=>setTableFocus(true);
 $('exitFocus').onclick=()=>setTableFocus(false);
+// Device rotation restores native landscape controls rather than leaving
+// a sideways overlay on an already-landscape screen.
+window.addEventListener('resize',()=>{if(focusActive&&!matchMedia('(orientation: portrait) and (max-width: 600px)').matches)setTableFocus(false)});
 
 rack();showPower(45);requestAnimationFrame(frame);
 </script></body></html>
