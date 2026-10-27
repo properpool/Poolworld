@@ -35,6 +35,8 @@ def handle(page):
     }""")
 
 def touch(cdp,kind,points):
+    # CDP touchEnd/touchCancel points identify CHANGED/ENDED touch IDs,
+    # not the remaining touches. Partial release must name the power finger.
     cdp.send('Input.dispatchTouchEvent',{'type':kind,
        'touchPoints':[{'x':p['x'],'y':p['y'],'id':i} for i,p in points]})
 
@@ -84,7 +86,7 @@ with sync_playwright() as pw:
             touch(cdp,'touchMove',[(1,aim1),(2,h0)])
             touch(cdp,'touchMove',[(1,aim1),(2,powerEnd)])
             before=state(page)
-            touch(cdp,'touchEnd',[(1,aim1)])
+            touch(cdp,'touchEnd',[(2,powerEnd)])
             held=state(page)
             check(tag+' two-finger power pull does not shoot before aim release',
                   not held['shooting'] and held['aimPointer'] is not None and
@@ -95,7 +97,7 @@ with sync_playwright() as pw:
             check(tag+' aim can still move after power finger lifts',
                   not final['shooting'] and final['aim']>held['aim']+.025,
                   {'held':held,'final':final})
-            touch(cdp,'touchEnd',[])
+            touch(cdp,'touchEnd',[(1,aim2)])
             fired=state(page)
             check(tag+' final aim release fires exactly one queued shot',
                   fired['shooting'] and fired['aimPointer'] is None and
@@ -116,8 +118,8 @@ with sync_playwright() as pw:
             touch(cdp,'touchStart',[(1,aim0)])
             touch(cdp,'touchStart',[(1,aim0),(2,h0)])
             touch(cdp,'touchMove',[(1,aim0),(2,powerEnd)])
-            touch(cdp,'touchEnd',[(1,aim0)])
-            touch(cdp,'touchCancel',[])
+            touch(cdp,'touchEnd',[(2,powerEnd)])
+            touch(cdp,'touchCancel',[(1,aim0)])
             cancelled=state(page)
             check(tag+' cancelled aim discards pending shot but retains power',
                   not cancelled['shooting'] and cancelled['aimPointer'] is None and
