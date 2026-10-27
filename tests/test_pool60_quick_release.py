@@ -44,7 +44,7 @@ with sync_playwright() as pw:
                 powerDrag,powerPointer,power,
                 breakShot:shot?.breakShot
             })''')
-            expected_level=5+95*min(1,(box['height']*fraction)/max(65,box['height']*.65))
+            expected_level=45+(100-45)*min(1,(box['height']*fraction)/max(65,box['height']*.65))
             expected_speed=(.45+7.9*(expected_level/100)**.92)*1.17
             label=f'{w}x{h} {int(fraction*100)}%-track immediate release'
             check(label+' starts break',state['shooting'] and state['breakShot'] is True,state)
