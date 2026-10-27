@@ -860,7 +860,11 @@ function shotSpeed(level,isBreak=breakShot){
  const p=Math.max(5,Math.min(100,level))/100;
  return (.45+7.9*Math.pow(p,.92))*(isBreak?1.17:1);
 }
-function shoot(){if(shooting||gameOver||ballInHand||balls[0].potted)return false;abandonFineAimHolds();slowFrameStreak=0;history=snapshot();shot={player:turn,breakShot,firstHit:null,railAfterContact:false,pocketed:[],scratch:false,targetEight:groups[turn]!==null&&remainingFor(turn)===0};const b=balls[0],speed=shotSpeed(power,breakShot);b.vx=Math.cos(aim)*speed;b.vy=Math.sin(aim)*speed;b.spin=spin/100*1.2;b.follow=follow/100*2.5;shooting=true;
+function shoot(){if(shooting||gameOver||ballInHand||balls[0].potted)return false;
+ // An explicit SHOOT commits the selected aim/power and retires any held
+ // touchscreen owners. Their late release must not rotate the next turn,
+ // change the shot strength, or fire a second shot after the table settles.
+ abandonActiveShotGestures();abandonFineAimHolds();slowFrameStreak=0;history=snapshot();shot={player:turn,breakShot,firstHit:null,railAfterContact:false,pocketed:[],scratch:false,targetEight:groups[turn]!==null&&remainingFor(turn)===0};const b=balls[0],speed=shotSpeed(power,breakShot);b.vx=Math.cos(aim)*speed;b.vy=Math.sin(aim)*speed;b.spin=spin/100*1.2;b.follow=follow/100*2.5;shooting=true;
  cueStrike={x:b.x,y:b.y,aim,power,elapsed:0};
  // The first rendered shot frame can precede its first physics tick.
  // Seed previous positions now, so it cannot interpolate from an old rack.
