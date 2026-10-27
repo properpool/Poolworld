@@ -92,6 +92,24 @@ with sync_playwright() as pw:
         check(label+' top-edge direct drag preserves aim',
               diff(page.evaluate('aim'),inside)<1e-8)
         page.mouse.up()
+        # Relative fine aiming starts on the cue ball. Unlike direct aim,
+        # it must keep tracking a captured finger across the cloth edge.
+        page.evaluate('rack();aim=-Math.PI/2')
+        cue=page.evaluate('({x:balls[0].x,y:balls[0].y})')
+        cx=box['x']+cue['x']*box['width']/1100
+        cy=box['y']+cue['y']*box['height']/570
+        touch(cdp,'touchStart',cx+5,cy+5)
+        check(label+' cue-side touch enters fine mode',
+              page.evaluate('aimFineDrag && dragAim'))
+        touch(cdp,'touchMove',cx+25,box['y']-24)
+        expected=-math.pi/2+20*.13*math.pi/180
+        check(label+' captured fine aim continues across top edge',
+              diff(page.evaluate('aim'),expected)<.002,
+              {'actual':page.evaluate('aim'),'expected':expected})
+        touch(cdp,'touchEnd',cx+25,box['y']-24)
+        check(label+' fine aim release keeps direction and unlocks',
+              diff(page.evaluate('aim'),expected)<.002 and
+              page.evaluate('!dragAim && aimPointer===null && !shooting'))
         check(label+' no browser errors',not errors,errors)
         page.close()
     browser.close()
