@@ -168,6 +168,8 @@ jobs:
         run: python tests/test_pool60_fine_aim_hold.py
       - name: One-cushion bank aiming preview and pocket/ball occlusion
         run: python tests/test_pool60_bank_aim_preview.py
+      - name: Cue power pullback, impact stroke and unchanged physics (four viewports)
+        run: python tests/test_pool60_cue_stroke_feedback.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
