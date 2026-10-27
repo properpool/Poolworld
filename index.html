@@ -774,14 +774,19 @@ canvas.addEventListener('lostpointercapture',finishAim);
 const track=$('track');let powerPointer=null,powerStart=45,powerMoved=false;
 function showPower(p){power=Math.max(5,Math.min(100,p));$('strength').value=power;$('powerValue').textContent=Math.round(power)+'%';const h=track.clientHeight;const y=(power-5)/95*(h-22)+11;$('handle').style.top=y+'px';$('fill').style.height=y+'px'}
 function padStart(e){if(shooting||gameOver||ballInHand||powerDrag)return;e.preventDefault();powerDrag=true;powerPointer=e.pointerId;powerY=e.clientY;powerStart=power;powerMoved=false;track.setPointerCapture(e.pointerId)}
+// Preserve the selected strength when dragging. The former mapping reset
+// every small downward pull to ~5-20%, making an intended 45% shot weak.
+// A signed relative drag also prevents an upward pull from jumping to the
+// absolute track coordinate (which depends on where the finger landed).
+function powerFromDrag(dy,initial,height){
+ const fraction=Math.min(1,Math.abs(dy)/Math.max(65,height*.65));
+ return dy>=0?initial+(100-initial)*fraction:initial-(initial-5)*fraction;
+}
 function padMove(e){if(!powerDrag||e.pointerId!==powerPointer)return;e.preventDefault();
  const dy=e.clientY-powerY,r=track.getBoundingClientRect();
  if(Math.abs(dy)>5)powerMoved=true;
  if(Math.abs(dy)<=5&&powerMoved){showPower(powerStart);return}
- // Pullback strength is relative to the initial finger position.
- // An absolute screen Y previously fired unexpectedly weak short pulls.
- if(dy>5)showPower(5+95*Math.min(1,dy/Math.max(65,r.height*.65)));
- else if(dy<-5)showPower(5+(e.clientY-r.top)/r.height*95);
+ if(Math.abs(dy)>5)showPower(powerFromDrag(dy,powerStart,r.height));
 }
 function padEnd(e){if(!powerDrag||e.pointerId!==powerPointer)return;
  const dy=e.clientY-powerY,prior=powerStart;
@@ -797,8 +802,7 @@ function padEnd(e){if(!powerDrag||e.pointerId!==powerPointer)return;
   // omitting pointermove entirely. Use the FINAL release coordinate to set
   // the actual impulse, otherwise a full pull fires at stale default power.
   const r=track.getBoundingClientRect();
-  if(dy>5)showPower(5+95*Math.min(1,dy/Math.max(65,r.height*.65)));
-  else if(dy<-5)showPower(5+(e.clientY-r.top)/r.height*95);
+  showPower(powerFromDrag(dy,prior,r.height));
   // Small pulls adjust power without unexpectedly releasing a weak shot.
   // SHOOT remains available for any chosen finesse strength.
   if(dy>=Math.max(42,track.clientHeight*.4)){if(shoot())showPower(45)}
