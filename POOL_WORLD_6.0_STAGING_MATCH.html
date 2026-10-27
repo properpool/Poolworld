@@ -142,7 +142,7 @@ function pocketBall(b){
   if(d<distance){distance=d;well=h}
  }
  pocketVisuals.push({id:b.id,x:b.x,y:b.y,
-  rollQ:b.rollQ.slice(),potted:false,targetX:well[0],targetY:well[1],elapsed:0});
+  rollQ:b.rollQ?[...b.rollQ]:[1,0,0,0],potted:false,targetX:well[0],targetY:well[1],elapsed:0});
  b.potted=true;b.vx=b.vy=0;
  if(shot){shot.pocketed.push(b.id);if(b.id===0)shot.scratch=true}
  renderDirty=true;
