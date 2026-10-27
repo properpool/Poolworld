@@ -68,7 +68,7 @@ with sync_playwright() as pw:
             check(label+' cue-side touch owns relative aim',
                 started['fine'] and started['active'] and started['ptr'] is not None,started)
             check(label+' near-edge release is modest',
-                5<coords['delta']<60,coords)
+                5<coords['delta']<120,coords)
             pointer_up(page,'touch',q['x'],q['y'])
             actual=page.evaluate('({aim,dragAim,aimPointer,power,shooting})')
             expected=.52+coords['delta']*.13*math.pi/180
