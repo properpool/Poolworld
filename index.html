@@ -910,13 +910,53 @@ function pointAim(e){if(shooting||gameOver||ballInHand||balls[0].potted)return;
   if(Math.hypot(p.x-b.x,p.y-b.y)>guard){aim=a;lastAim=a}
  }
 }
-canvas.addEventListener('pointerdown',e=>{if(shooting||gameOver||aimPointer!==null)return;
- if(ballInHand){const p=pointerCoords(e);if(canPlace(p.x,p.y)){balls[0].x=p.x;balls[0].y=p.y;ballInHand=false;updateHUD();$('status').textContent='Cue ball placed. Aim and shoot.'}else{$('status').textContent='Invalid placement — keep the cue ball inside the cloth and clear of other balls.'}return}
+// After a foul, keep the cue ball in placement mode until the finger lifts.
+// The previous pointerdown handler confirmed immediately, so a natural
+// press-and-drag gesture silently became an aim gesture and never moved the
+// ball. Preview only legal positions; reject invalid drops and restore the
+// original cue position on cancellation or lost pointer capture.
+let placementPointer=null,placementOrigin=null;
+function moveCuePlacement(e){
+ if(e.pointerId!==placementPointer||!ballInHand)return false;
+ const p=pointerCoords(e);
+ if(!canPlace(p.x,p.y))return false;
+ balls[0].x=p.x;balls[0].y=p.y;renderDirty=true;
+ return true;
+}
+function finishCuePlacement(e){
+ if(e.pointerId!==placementPointer)return;
+ const p=pointerCoords(e),valid=e.type==='pointerup'&&canPlace(p.x,p.y);
+ placementPointer=null;
+ const origin=placementOrigin;placementOrigin=null;
+ if(valid){
+  balls[0].x=p.x;balls[0].y=p.y;ballInHand=false;
+  updateHUD();$('status').textContent='Cue ball placed. Aim and shoot.';
+ }else{
+  balls[0].x=origin[0];balls[0].y=origin[1];renderDirty=true;
+  $('status').textContent=e.type==='pointerup'
+   ?'Invalid placement — keep the cue ball inside the cloth and clear of other balls.'
+   :'Cue-ball placement cancelled. Tap or drag to a legal position.';
+ }
+}
+canvas.addEventListener('pointerdown',e=>{if(shooting||gameOver||aimPointer!==null||placementPointer!==null)return;
+ if(ballInHand){
+  e.preventDefault();
+  placementPointer=e.pointerId;placementOrigin=[balls[0].x,balls[0].y];
+  canvas.setPointerCapture(e.pointerId);
+  moveCuePlacement(e);
+  return;
+ }
  aimPointer=e.pointerId;dragAim=true;aimStartX=e.clientX;aimStartY=e.clientY;aimStartAngle=aim;
  aimFineDrag=nearCueTouch(e);canvas.setPointerCapture(e.pointerId);
  if(!precisionAim&&!aimFineDrag)pointAim(e)
 });
-canvas.addEventListener('pointermove',e=>{if(dragAim&&e.pointerId===aimPointer)pointAim(e)});
+canvas.addEventListener('pointermove',e=>{
+ if(placementPointer!==null){moveCuePlacement(e);return}
+ if(dragAim&&e.pointerId===aimPointer)pointAim(e)
+});
+canvas.addEventListener('pointerup',finishCuePlacement);
+canvas.addEventListener('pointercancel',finishCuePlacement);
+canvas.addEventListener('lostpointercapture',finishCuePlacement);
 function finishAim(e){if(e.pointerId!==aimPointer)return;
  // A fast touchscreen/mouse release may arrive with no intermediate move.
  // Apply the final release coordinate before clearing pointer capture, so the
