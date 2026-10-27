@@ -808,6 +808,10 @@ function padEnd(e){if(!powerDrag||e.pointerId!==powerPointer)return;
   if(dy>=Math.max(42,track.clientHeight*.4)){if(shoot())showPower(45)}
  }
 }
+// The visible power panel is wider than the slider, especially in landscape.
+// Capture thumb starts in its side margins too; subsequent movement is still
+// captured by the track and uses the identical calibrated relative power curve.
+$('powerControl').addEventListener('pointerdown',padStart);
 track.addEventListener('pointerdown',padStart);track.addEventListener('pointermove',padMove);track.addEventListener('pointerup',padEnd);track.addEventListener('pointercancel',padEnd);
 // Releasing pointer capture unexpectedly must never leave the slider stuck
 // or trigger a shot; a completed pointerup has already cleared powerDrag.
