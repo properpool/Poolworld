@@ -25,7 +25,7 @@ with sync_playwright() as pw:
   errors=[]
   page.on('pageerror',lambda e:errors.append(str(e)))
   page.set_content(HTML,wait_until='load')
-  for level in (15,45,90):
+  for level in (5,15,45,90,100):
    data=page.evaluate("""level=>{
     rack();balls=[makeBall(0,320,285)];breakShot=false;aim=0;
     gameOver=false;ballInHand=false;showPower(level);
