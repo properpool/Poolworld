@@ -58,6 +58,9 @@ const canvas=document.getElementById("table"),ctx=canvas.getContext("2d"),$=id=>
 let focusActive=false;
 const W=1100,H=570, L=79,R=1021,T=78,B=492,rad=12.2, pocket=27, pi=Math.PI;
 const holes=[[L,T],[W/2,T-8],[R,T],[L,B],[W/2,B+8],[R,B]];
+// Pocket capture is immediate for physics and rules, but the visual sphere
+// falls into the well over a few rendered frames instead of vanishing.
+const POCKET_SINK_DURATION=.19,pocketVisuals=[];
 // Rounded pocket jaws: physically wider corner mouths reduce false rejections of near-centre shots.
 // Side pockets retain their prior width; visual cushion endpoints share these exact coordinates.
 // Coordinates remain in table space; collision impulses cannot create energy.
@@ -128,8 +131,23 @@ const remainingFor=p=>balls.filter(b=>!b.potted&&groupOf(b.id)===groups[p]).leng
 function canPlace(x,y){return Number.isFinite(x)&&Number.isFinite(y)&&x>=L+rad+2&&x<=R-rad-2&&y>=T+rad+2&&y<=B-rad-2&&!holes.some(([hx,hy])=>Math.hypot(x-hx,y-hy)<pocket+rad*.2)&&jaws.every(([jx,jy])=>Math.hypot(x-jx,y-jy)>=rad+jawRadius+.1)&&balls.every(b=>b.id===0||b.potted||Math.hypot(b.x-x,b.y-y)>=2*rad+.5)}
 function cuePosition(){const x0=L+(R-L)*.24,y0=(T+B)/2;if(canPlace(x0,y0))return [x0,y0];for(let y=T+rad+6;y<=B-rad-6;y+=rad*2.3)for(let x=L+rad+6;x<=R-rad-6;x+=rad*2.3)if(canPlace(x,y))return [x,y];return [x0,y0]}
 function snapshot(){return {balls:balls.map(b=>({...b,rollQ:b.rollQ?[...b.rollQ]:[1,0,0,0]})),turn,groups:{...groups},ballInHand,gameOver,winner,breakShot,aim,power,spin,follow}}
-function restore(state){abandonCuePlacementGesture();abandonActiveShotGestures();abandonFineAimHolds();balls=state.balls.map(b=>({...b,rollQ:b.rollQ?[...b.rollQ]:[1,0,0,0]}));turn=state.turn;groups={...state.groups};ballInHand=state.ballInHand;gameOver=state.gameOver;winner=state.winner;breakShot=state.breakShot;aim=state.aim;power=state.power??power;spin=state.spin??spin;follow=state.follow??follow;shooting=false;shot=null;cueStrike=null;pendingAimReleaseShot=false;events.length=0;accumulator=0;showPower(power);$('spin').value=spin;$('follow').value=follow;updateHUD()}
-function pocketBall(b){if(b.potted)return;b.potted=true;b.vx=b.vy=0;if(shot){shot.pocketed.push(b.id);if(b.id===0)shot.scratch=true}queueSound('pocket',.85)}
+function restore(state){pocketVisuals.length=0;abandonCuePlacementGesture();abandonActiveShotGestures();abandonFineAimHolds();balls=state.balls.map(b=>({...b,rollQ:b.rollQ?[...b.rollQ]:[1,0,0,0]}));turn=state.turn;groups={...state.groups};ballInHand=state.ballInHand;gameOver=state.gameOver;winner=state.winner;breakShot=state.breakShot;aim=state.aim;power=state.power??power;spin=state.spin??spin;follow=state.follow??follow;shooting=false;shot=null;cueStrike=null;pendingAimReleaseShot=false;events.length=0;accumulator=0;showPower(power);$('spin').value=spin;$('follow').value=follow;updateHUD()}
+function pocketBall(b){
+ if(b.potted)return;
+ // Preserve the last real ball pose. The ghost is render-only and is never
+ // included in collision, rail, cue, scoring or placement calculations.
+ let well=holes[0],distance=Infinity;
+ for(const h of holes){
+  const d=(b.x-h[0])**2+(b.y-h[1])**2;
+  if(d<distance){distance=d;well=h}
+ }
+ pocketVisuals.push({id:b.id,x:b.x,y:b.y,
+  rollQ:b.rollQ?[...b.rollQ]:[1,0,0,0],potted:false,targetX:well[0],targetY:well[1],elapsed:0});
+ b.potted=true;b.vx=b.vy=0;
+ if(shot){shot.pocketed.push(b.id);if(b.id===0)shot.scratch=true}
+ renderDirty=true;
+ queueSound('pocket',.85);
+}
 function resolveShot(){if(!shot)return;const s=shot;shot=null;shooting=false;cueStrike=null;
 // The whole table has settled. A frozen side-spin or follow value must not
 // survive the turn and alter a later collision on a stationary object ball.
@@ -204,7 +222,7 @@ function rollMarker(q,p,out){
 }
 const ROLL_STRIPE_AXIS=[0,1,0],ROLL_MARKER_OUT=[0,0,0];
 const ROLL_MEASLE_MARKS=[[0,0,1],[0,0,-1],[1,0,0],[-1,0,0],[0,1,0],[0,-1,0]];
-function rack(){abandonCuePlacementGesture();abandonActiveShotGestures();abandonFineAimHolds();balls=[makeBall(0,L+(R-L)*.24,(T+B)/2)];const bx=L+(R-L)*.71,cy=(T+B)/2,step=rad*2.035;let ids=[1,9,2,10,8,11,3,12,4,13,5,14,6,15,7],n=0;for(let row=0;row<5;row++)for(let j=0;j<=row;j++){const x=bx+row*step*.866,y=cy+(j-row/2)*step;balls.push(makeBall(ids[n++],x,y))}aim=0;shooting=false;shot=null;cueStrike=null;history=null;events.length=0;accumulator=0;slowFrameStreak=0;pendingAimReleaseShot=false;turn=1;groups={1:null,2:null};ballInHand=false;gameOver=false;winner=null;breakShot=true;$('status').textContent='Player 1 to break. Aim and pull the power handle, or press SHOOT.';updateHUD()}
+function rack(){pocketVisuals.length=0;abandonCuePlacementGesture();abandonActiveShotGestures();abandonFineAimHolds();balls=[makeBall(0,L+(R-L)*.24,(T+B)/2)];const bx=L+(R-L)*.71,cy=(T+B)/2,step=rad*2.035;let ids=[1,9,2,10,8,11,3,12,4,13,5,14,6,15,7],n=0;for(let row=0;row<5;row++)for(let j=0;j<=row;j++){const x=bx+row*step*.866,y=cy+(j-row/2)*step;balls.push(makeBall(ids[n++],x,y))}aim=0;shooting=false;shot=null;cueStrike=null;history=null;events.length=0;accumulator=0;slowFrameStreak=0;pendingAimReleaseShot=false;turn=1;groups={1:null,2:null};ballInHand=false;gameOver=false;winner=null;breakShot=true;$('status').textContent='Player 1 to break. Aim and pull the power handle, or press SHOOT.';updateHUD()}
 function updateHUD(){renderDirty=true;const left=balls.filter(b=>b.id!==0&&!b.potted).length;$('remaining').textContent=left+' balls left';$('player').textContent=`PLAYER ${turn} · ${groups[turn]?groups[turn].toUpperCase():'OPEN TABLE'}`;$('phase').textContent=gameOver?`PLAYER ${winner} WINS`:shooting?'BALLS MOVING':ballInHand?'BALL IN HAND':breakShot?'READY TO BREAK':'READY TO SHOOT';$('shoot').disabled=shooting||gameOver;$('shoot').textContent=ballInHand?'PLACE CUE':'SHOOT';$('shoot').setAttribute('aria-label',ballInHand?'Confirm cue-ball placement':'Shoot the cue ball');$('shoot').style.opacity=$('shoot').disabled?'.55':'1'}
 const bg=document.createElement('canvas');bg.width=W;bg.height=H;const g=bg.getContext('2d');
 function staticTable(){g.clearRect(0,0,W,H);let grad=g.createLinearGradient(0,0,0,H);grad.addColorStop(0,'#1d292b');grad.addColorStop(1,'#060b0e');g.fillStyle=grad;g.fillRect(0,0,W,H);g.fillStyle='#422716';roundRect(g,24,25,W-48,H-50,45);g.fill();g.fillStyle='#9b6033';roundRect(g,33,34,W-66,H-68,37);g.fill();g.fillStyle='#27180f';roundRect(g,47,48,W-94,H-96,28);g.fill();g.fillStyle='#153b38';roundRect(g,L-14,T-14,R-L+28,B-T+28,17);g.fill();const cloth=g.createLinearGradient(0,T,0,B);cloth.addColorStop(0,'#197b67');cloth.addColorStop(.5,'#146453');cloth.addColorStop(1,'#0b4b42');g.fillStyle=cloth;g.fillRect(L,T,R-L,B-T);g.strokeStyle='#e9f0d766';g.lineWidth=1;g.beginPath();g.moveTo(L+(R-L)*.24,T);g.lineTo(L+(R-L)*.24,B);g.stroke();for(let y=T+24;y<B;y+=37){for(let x=L+24;x<R;x+=37){g.fillStyle='#fff';g.globalAlpha=.018;g.fillRect(x,y,1,1)}}g.globalAlpha=1;for(let i=0;i<holes.length;i++){let [x,y]=holes[i];g.beginPath();g.fillStyle='#06080a';g.arc(x,y,pocket+3,0,pi*2);g.fill();g.beginPath();g.strokeStyle='#b38a50';g.lineWidth=5;g.arc(x,y,pocket+4,0,pi*2);g.stroke()}for(let i=1;i<=3;i++){let x=L+(R-L)*i/4;for(let y of [51,519]){g.fillStyle='#ead1a0';g.beginPath();g.arc(x,y,3.2,0,pi*2);g.fill()}}}
@@ -333,6 +351,21 @@ function blendedRoll(i,alpha){
  q[0]=w*inv;q[1]=x*inv;q[2]=y*inv;q[3]=z*inv;
  return q;
 }
+// Animate a captured ball toward the pocket centre, shrinking/fading under
+// the remaining live balls. This never changes the authoritative ball state.
+function drawPocketVisuals(){
+ for(const ghost of pocketVisuals){
+  const p=Math.min(1,ghost.elapsed/POCKET_SINK_DURATION),ease=p*(2-p);
+  const scale=1-.88*ease;
+  ctx.save();
+  ctx.translate(ghost.x+(ghost.targetX-ghost.x)*ease*.65,
+                ghost.y+(ghost.targetY-ghost.y)*ease*.65);
+  ctx.scale(scale,scale);ctx.translate(-ghost.x,-ghost.y);
+  ctx.globalAlpha=Math.max(0,1-p);
+  drawBall(ghost,ghost.rollQ);
+  ctx.restore();
+ }
+}
 function render(){ctx.clearRect(0,0,W,H);ctx.drawImage(bg,0,0);if(!shooting&&!gameOver&&!ballInHand&&!balls[0].potted){drawAim()}
  else if(shooting&&cueStrike){
   // shoot() applies the physical cue impulse immediately. Start the visible
@@ -342,6 +375,7 @@ function render(){ctx.clearRect(0,0,W,H);ctx.drawImage(bg,0,0);if(!shooting&&!ga
   const followThrough=.65+.35*Math.min(1,cueStrike.elapsed/CUE_STROKE_DURATION);
   drawCue(cueStrike.x,cueStrike.y,cueStrike.aim,cueStrike.power,followThrough);
  }
+ if(pocketVisuals.length)drawPocketVisuals();
  const blend=interpolateVisual&&shooting&&beforePositions.length===balls.length&&beforeRollQ.length===balls.length;
  const alpha=blend?Math.max(0,Math.min(1,accumulator/STEP)):1;
  for(let i=0;i<balls.length;i++){
@@ -837,6 +871,15 @@ function settled(){
 // retains the original eight-step safety limit. Idle owes no simulation time.
 // This preserves shot speed, NOT visual smoothness at a genuinely low FPS.
 function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.25)):0;last=t;
+ // Keep rendering briefly even if the shot resolves on the capture frame.
+ // The final expired frame clears the ghost from the canvas.
+ if(pocketVisuals.length){
+  for(let i=pocketVisuals.length-1;i>=0;i--){
+   pocketVisuals[i].elapsed+=elapsed;
+   if(pocketVisuals[i].elapsed>=POCKET_SINK_DURATION)pocketVisuals.splice(i,1);
+  }
+  renderDirty=true;
+ }
  if(shooting&&cueStrike){cueStrike.elapsed+=elapsed;if(cueStrike.elapsed>=CUE_STROKE_DURATION)cueStrike=null}
  if(shooting){
  // A sustained 13.5-14.5fps callback (69-74ms) needs 8.3-8.9 physics
