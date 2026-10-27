@@ -32,9 +32,30 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid
 @media(orientation:landscape) and (max-height:480px){.wrap{padding:3px max(3px,env(safe-area-inset-right)) 3px max(3px,env(safe-area-inset-left))}.topbtn{min-height:30px}.actions{gap:3px}.actions button{min-height:36px}}
 @media(orientation:landscape) and (min-width:1051px) and (max-height:800px){.stage{justify-content:center}.board{flex:0 1 auto;width:min(100%,calc((100dvh - 255px)*1.93));aspect-ratio:1.93}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:0.01ms!important;animation-duration:0.01ms!important}}
-</style></head><body><header><b>POOL WORLD</b><span>Local match engine · v6.0</span><button class="topbtn" id="sound">🔊</button></header><div class="wrap"><div class="score"><span id="player">PLAYER 1 · OPEN TABLE</span><strong id="phase">READY TO BREAK</strong><span id="remaining">15 balls</span></div><div class="stage"><div class="board"><canvas id="table" width="1100" height="570"></canvas></div><div class="power" id="powerControl"><label>POWER <output id="powerValue">45%</output></label><div class="track" id="track"><div class="fill" id="fill"></div><div class="handle" id="handle"></div></div><div class="tip">PULL<br>DOWN</div></div></div><div class="status" id="status">Drag across the table to aim. Pull the power handle down and release to shoot.</div><div class="actions"><button id="aimLeft" aria-label="Fine aim left half a degree">◀ 0.5°</button><button class="shoot" id="shoot">SHOOT</button><button id="aimRight" aria-label="Fine aim right half a degree">0.5° ▶</button><button id="precision" aria-pressed="false" aria-label="Toggle precision drag aiming">PRECISION: OFF</button><button id="reset">NEW RACK</button><button id="undo">RETRY SHOT</button><button id="guide">GUIDE: ON</button></div><div class="hint">Tap the table to aim · PRECISION: drag sideways for tiny adjustments without snapping · Pull down to shoot · Original 3.9 sounds retained</div><details><summary>Shot adjustments</summary><div class="settings"><label>Power <input id="strength" type="range" min="5" max="100" value="45"></label><label>Side spin <input id="spin" type="range" min="-100" max="100" value="0"></label><label>Top / backspin <input id="follow" type="range" min="-100" max="100" value="0"></label></div></details></div><script>
+
+/* Portrait-phone full-table focus: 90-degree virtual landscape doubles the
+   usable ball size without stretching the cloth or altering the physics.
+   Optional: normal portrait and native landscape layouts remain unchanged. */
+#focusMode{display:none}
+@media(orientation:portrait) and (max-width:600px){#focusMode{display:inline-block}}
+#focusOverlay{display:none;position:fixed;inset:0;z-index:2000;background:#071216;overflow:hidden;overscroll-behavior:none}
+#focusOverlay.active{display:block}
+#focusShell{position:absolute;left:100vw;top:0;width:100dvh;height:100dvw;transform:rotate(90deg);transform-origin:top left;padding:4px;display:flex}
+#focusMount{display:flex;flex:1;min-height:0;min-width:0;flex-direction:column;gap:3px}
+#focusMount .score,#focusMount .status{display:none}
+#focusMount .stage{flex:1;min-height:0;min-width:0;align-items:center;justify-content:center;gap:6px}
+#focusMount .board{flex:0 0 auto;width:min(calc(100% - 82px),calc((100dvw - 60px)*1100/570));height:auto;aspect-ratio:1100/570;border-radius:10px}
+#focusMount .power{flex:0 0 68px;width:68px;height:100%;max-height:calc(100dvw - 60px);border-radius:9px}
+#focusMount .track{min-height:110px;width:44px}
+#focusMount .actions{flex:0 0 44px;min-height:44px;max-height:44px;display:flex;flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;overflow-y:hidden;gap:5px;margin:0;padding:0 3px;scrollbar-width:none}
+#focusMount .actions::-webkit-scrollbar{display:none}
+#focusMount .actions button{flex:0 0 auto;min-height:42px;min-width:44px;padding:6px 9px}
+#focusMount #focusMode{display:none!important}
+[hidden]{display:none!important}
+</style></head><body><header><b>POOL WORLD</b><span>Local match engine · v6.0</span><button class="topbtn" id="sound">🔊</button></header><div class="wrap"><div class="score"><span id="player">PLAYER 1 · OPEN TABLE</span><strong id="phase">READY TO BREAK</strong><span id="remaining">15 balls</span></div><div class="stage"><div class="board"><canvas id="table" width="1100" height="570"></canvas></div><div class="power" id="powerControl"><label>POWER <output id="powerValue">45%</output></label><div class="track" id="track"><div class="fill" id="fill"></div><div class="handle" id="handle"></div></div><div class="tip">PULL<br>DOWN</div></div></div><div class="status" id="status">Drag across the table to aim. Pull the power handle down and release to shoot.</div><div class="actions"><button id="aimLeft" aria-label="Fine aim left half a degree">◀ 0.5°</button><button class="shoot" id="shoot">SHOOT</button><button id="focusMode" type="button" aria-label="Expand table for portrait phone aiming">BIG TABLE</button><button id="exitFocus" type="button" hidden>EXIT BIG TABLE</button><button id="aimRight" aria-label="Fine aim right half a degree">0.5° ▶</button><button id="precision" aria-pressed="false" aria-label="Toggle precision drag aiming">PRECISION: OFF</button><button id="reset">NEW RACK</button><button id="undo">RETRY SHOT</button><button id="guide">GUIDE: ON</button></div><div class="hint">Tap the table to aim · PRECISION: drag sideways for tiny adjustments without snapping · Pull down to shoot · Original 3.9 sounds retained</div><details><summary>Shot adjustments</summary><div class="settings"><label>Power <input id="strength" type="range" min="5" max="100" value="45"></label><label>Side spin <input id="spin" type="range" min="-100" max="100" value="0"></label><label>Top / backspin <input id="follow" type="range" min="-100" max="100" value="0"></label></div></details></div><div id="focusOverlay" aria-hidden="true"><div id="focusShell"><div id="focusMount"></div></div></div><script>
 "use strict";
 const canvas=document.getElementById("table"),ctx=canvas.getContext("2d"),$=id=>document.getElementById(id);
+let focusActive=false;
 const W=1100,H=570, L=79,R=1021,T=78,B=492,rad=12.2, pocket=27, pi=Math.PI;
 const holes=[[L,T],[W/2,T-8],[R,T],[L,B],[W/2,B+8],[R,B]];
 // Rounded pocket jaws: physically wider corner mouths reduce false rejections of near-centre shots.
@@ -750,12 +771,19 @@ function shoot(){if(shooting||gameOver||ballInHand||balls[0].potted)return false
   if(!visualRollQ[i])visualRollQ[i]=[1,0,0,0];
  }
  events.length=0;sound('cue',Math.max(.3,power/90));updateHUD();$('status').textContent='Shot in progress…';return true}
-function pointerCoords(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
+function pointerCoords(e){
+ const r=canvas.getBoundingClientRect();
+ // Rotated portrait focus maps table X to screen Y and table Y to -screen X.
+ // Bounding-client-rect alone is insufficient after a 90-degree transform.
+ return focusActive
+  ?{x:(e.clientY-r.top)*W/r.height,y:(r.right-e.clientX)*H/r.width}
+  :{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};
+}
 let lastAim=aim,precisionAim=false,aimPointer=null,aimStartX=0,aimStartY=0,aimStartAngle=0,aimFineDrag=false;
 function nearCueTouch(e){
  if(e.pointerType!=='touch'&&e.pointerType!=='pen')return false;
  const p=pointerCoords(e),b=balls[0],bounds=canvas.getBoundingClientRect();
- const guard=Math.max(rad*2,20*W/bounds.width);
+ const guard=Math.max(rad*2,20*W/(focusActive?bounds.height:bounds.width));
  return Math.hypot(p.x-b.x,p.y-b.y)<=guard;
 }
 function pointAim(e){if(shooting||gameOver||ballInHand||balls[0].potted)return;
@@ -778,14 +806,15 @@ function pointAim(e){if(shooting||gameOver||ballInHand||balls[0].potted)return;
   // previously an entirely vertical drag did NOTHING, making horizontal
   // shots difficult to line up on narrow touchscreens. The cos projection
   // prevents a thumb moving along a vertical cue from rotating it.
-  const dx=e.clientX-aimStartX,dy=e.clientY-aimStartY;
+  const dx=focusActive?e.clientY-aimStartY:e.clientX-aimStartX;
+  const dy=focusActive?aimStartX-e.clientX:e.clientY-aimStartY;
   aim=aimStartAngle+(dx+dy*Math.cos(aimStartAngle))*(pi/180)*.13;lastAim=aim;
  }else{
   const p=pointerCoords(e),b=balls[0],a=Math.atan2(p.y-b.y,p.x-b.x);
   // A finger landing over the tiny cue ball must not unexpectedly snap the aim.
   // Use a CSS-pixel touch guard so portrait and landscape feel consistent.
   const bounds=canvas.getBoundingClientRect();
-  const guard=(e.pointerType==='touch'||e.pointerType==='pen')?Math.max(rad*2,20*W/bounds.width):rad*2;
+  const guard=(e.pointerType==='touch'||e.pointerType==='pen')?Math.max(rad*2,20*W/(focusActive?bounds.height:bounds.width)):rad*2;
   if(Math.hypot(p.x-b.x,p.y-b.y)>guard){aim=a;lastAim=a}
  }
 }
@@ -819,11 +848,11 @@ function showPower(p){power=Math.max(5,Math.min(100,p));$('strength').value=powe
 function padStart(e){if(shooting||gameOver||ballInHand||powerDrag)return;
  // Side margins are an intentional larger thumb target, but the POWER label
  // and PULL DOWN instruction are not. A tap there must never reset strength.
- if(e.currentTarget!==track){const r=track.getBoundingClientRect();if(e.clientY<r.top||e.clientY>r.bottom)return}
+ if(e.currentTarget!==track){const r=track.getBoundingClientRect();if(focusActive?(e.clientX<r.left||e.clientX>r.right):(e.clientY<r.top||e.clientY>r.bottom))return}
  // Only a deliberate bare-track tap changes absolute power. Touching the
  // handle or widened side margins must retain the chosen shot strength.
  powerTapOnBareTrack=e.target===track||e.target===$('fill');
- e.preventDefault();powerDrag=true;powerPointer=e.pointerId;powerY=e.clientY;powerStart=power;powerMoved=false;track.setPointerCapture(e.pointerId)}
+ e.preventDefault();powerDrag=true;powerPointer=e.pointerId;powerY=powerGestureY(e);powerStart=power;powerMoved=false;track.setPointerCapture(e.pointerId)}
 // Preserve the selected strength when dragging. The former mapping reset
 // every small downward pull to ~5-20%, making an intended 45% shot weak.
 // A signed relative drag also prevents an upward pull from jumping to the
@@ -832,27 +861,28 @@ function powerFromDrag(dy,initial,height){
  const fraction=Math.min(1,Math.abs(dy)/Math.max(65,height*.65));
  return dy>=0?initial+(100-initial)*fraction:initial-(initial-5)*fraction;
 }
+function powerGestureY(e){return focusActive?-e.clientX:e.clientY}
 function padMove(e){if(!powerDrag||e.pointerId!==powerPointer)return;e.preventDefault();
- const dy=e.clientY-powerY,r=track.getBoundingClientRect();
+ const dy=powerGestureY(e)-powerY;
  if(Math.abs(dy)>5)powerMoved=true;
  if(Math.abs(dy)<=5&&powerMoved){showPower(powerStart);return}
- if(Math.abs(dy)>5)showPower(powerFromDrag(dy,powerStart,r.height));
+ if(Math.abs(dy)>5)showPower(powerFromDrag(dy,powerStart,track.clientHeight));
 }
 function padEnd(e){if(!powerDrag||e.pointerId!==powerPointer)return;
- const dy=e.clientY-powerY,prior=powerStart,trackTap=powerTapOnBareTrack;
+ const dy=powerGestureY(e)-powerY,prior=powerStart,trackTap=powerTapOnBareTrack;
  powerDrag=false;powerPointer=null;powerTapOnBareTrack=false;
  if(e.type==='pointercancel'||e.type==='lostpointercapture'){showPower(prior);return}
  if(e.type==='pointerup'){
   if(Math.abs(dy)<=5){
    if(powerMoved)showPower(prior);
-   else if(trackTap&&Math.abs(power-prior)<=.5){const r=track.getBoundingClientRect();showPower(5+(e.clientY-r.top)/r.height*95)}
+   else if(trackTap&&Math.abs(power-prior)<=.5){const r=track.getBoundingClientRect();showPower(5+(focusActive?(r.right-e.clientX)/r.width:(e.clientY-r.top)/r.height)*95)}
    return;
   }
   // Some browsers coalesce a quick swipe into pointerdown + pointerup,
   // omitting pointermove entirely. Use the FINAL release coordinate to set
   // the actual impulse, otherwise a full pull fires at stale default power.
   const r=track.getBoundingClientRect();
-  showPower(powerFromDrag(dy,prior,r.height));
+  showPower(powerFromDrag(dy,prior,track.clientHeight));
   // Small pulls adjust power without unexpectedly releasing a weak shot.
   // SHOOT remains available for any chosen finesse strength.
   if(dy>=Math.max(42,track.clientHeight*.4)){if(shoot())showPower(45)}
@@ -886,5 +916,33 @@ $('shoot').onclick=primaryAction;$('reset').onclick=rack;$('undo').onclick=()=>{
 $('guide').onclick=()=>{renderDirty=true;guide=!guide;$('guide').textContent='GUIDE: '+(guide?'ON':'OFF')};$('sound').onclick=()=>{soundOn=!soundOn;$('sound').textContent=soundOn?'🔊':'🔇'};
 $('strength').oninput=e=>showPower(+e.target.value);$('spin').oninput=e=>spin=+e.target.value;$('follow').oninput=e=>follow=+e.target.value;
 window.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'){e.preventDefault();if(!e.repeat)primaryAction()}if(e.code==='ArrowLeft'){aim-=.01;renderDirty=true;e.preventDefault()}if(e.code==='ArrowRight'){aim+=.01;renderDirty=true;e.preventDefault()}});
+
+/* Portrait focus moves the SAME live canvas and controls, preserving the
+   entire match state, approved audio and physics. DOM event listeners survive
+   reparenting. Exit restores the original responsive layout exactly. */
+const focusNodes=['.score','.stage','.status','.actions'].map(sel=>document.querySelector('.wrap '+sel));
+const focusAnchors=focusNodes.map(node=>{
+ const marker=document.createComment('Pool World focus restore');
+ node.parentNode.insertBefore(marker,node);return marker;
+});
+function setTableFocus(active){
+ if(active===focusActive)return;
+ // An in-progress captured gesture must not be remapped mid-touch.
+ if(dragAim||powerDrag)return;
+ if(active&&!(matchMedia('(orientation: portrait) and (max-width: 600px)').matches))return;
+ focusActive=active;
+ const overlay=$('focusOverlay'),mount=$('focusMount');
+ if(active){for(const node of focusNodes)mount.appendChild(node)}
+ else{focusNodes.forEach((node,i)=>focusAnchors[i].parentNode.insertBefore(node,focusAnchors[i]))}
+ overlay.classList.toggle('active',active);
+ overlay.setAttribute('aria-hidden',String(!active));
+ $('focusMode').hidden=active;$('exitFocus').hidden=!active;
+ document.documentElement.style.overflow=active?'hidden':'';
+ document.body.style.overflow=active?'hidden':'';
+ renderDirty=true;render();
+}
+$('focusMode').onclick=()=>setTableFocus(true);
+$('exitFocus').onclick=()=>setTableFocus(false);
+
 rack();showPower(45);requestAnimationFrame(frame);
 </script></body></html>
