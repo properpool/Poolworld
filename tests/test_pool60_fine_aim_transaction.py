@@ -14,6 +14,9 @@ def check(name,ok,details=None):
     if not ok: print('FAIL',name,details,flush=True)
 def angle(page): return page.evaluate('aim')
 def target(page,selector):
+    # A 360px mouse viewport wraps the action row below the fold. Scroll
+    # the button into the visible viewport before synthesising pointer input.
+    page.locator(selector).scroll_into_view_if_needed()
     box=page.locator(selector).bounding_box()
     return box['x']+box['width']/2,box['y']+box['height']/2
 def down(page,cdp,x,y):
