@@ -45,8 +45,8 @@ with sync_playwright() as pw:
   visual=page.evaluate("""() => {
     rack();balls=[makeBall(0,300,285)];breakShot=false;aim=0;
     showPower(90);
-    const original=drawCue,seen=[];
     if(typeof drawCue!=='function')return {available:false};
+    const original=drawCue,seen=[];
     drawCue=function(x,y,a,p,phase){seen.push({x,y,a,p,phase});return original.apply(this,arguments)};
     render();const idle=seen.slice();
     const expected=shotSpeed(90,false),fired=shoot(),velocity=Math.hypot(balls[0].vx,balls[0].vy);
