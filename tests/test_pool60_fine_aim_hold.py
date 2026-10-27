@@ -51,6 +51,17 @@ with sync_playwright() as pw:
             page.set_content(HTML,wait_until='load')
             cdp=page.context.new_cdp_session(page) if mode=='touch' else None
             label=f'{w}x{h} {mode}'
+            for button in ('#aimLeft','#aimRight'):
+                props=page.evaluate("""sel=>{
+                    const b=document.querySelector(sel),css=getComputedStyle(b);
+                    const event=new MouseEvent('contextmenu',{bubbles:true,cancelable:true});
+                    const allowed=b.dispatchEvent(event);
+                    return {touchAction:css.touchAction,userSelect:css.userSelect,
+                            contextMenuBlocked:!allowed};
+                }""",button)
+                check(label+button+' mobile hold suppresses selection/context menu',
+                    props['touchAction']=='none' and props['userSelect']=='none'
+                    and props['contextMenuBlocked'],props)
             for button,sign in (('#aimLeft',-1),('#aimRight',1)):
                 x,y=target(page,button)
                 reset(page)
