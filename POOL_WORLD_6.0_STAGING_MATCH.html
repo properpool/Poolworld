@@ -568,10 +568,10 @@ function physics(dt){
   const pdx=fromX+along*travelX-hx,pdy=fromY+along*travelY-hy;
   if(pdx*pdx+pdy*pdy<POCKET_CAPTURE_RADIUS2){pocketBall(b);break}
  }if(b.potted)continue;collideJaw(b);constrainRail(b);
- // Roll the visible sphere by its ACTUAL travel after rail and jaw constraints.
- // The proposed free-flight step can overshoot a cushion; rotating by that
- // overshoot made the ball texture visibly skid at hard rail contacts.
- rotateRoll(b,b.x-before[bi][0],b.y-before[bi][1]);
+ // Defer visible sphere rotation until after ball-ball impulses, the
+ // post-contact jaw pass and final overlap projection. Rotating here would
+ // account for free-flight/rail motion but NOT the collision correction:
+ // on hard impacts the ball centre jumps while stripes/measle dots skid.
 }
 earliestCueContact(before);
 // Resolve overlapping pairs in swept-contact order, not rack array order.
@@ -693,6 +693,13 @@ for(let ci=0;ci<contacts.length;){
    }
   }
   if(unresolved)projectRailContactOverlaps();
+ }
+ // The displayed sphere must rotate by the same FINAL net displacement
+ // that the renderer will show for this tick. Keep the physics and impulses
+ // unchanged; only visual orientation is updated after collision projection.
+ for(let bi=0;bi<balls.length;bi++){
+  const b=balls[bi];
+  if(!b.potted)rotateRoll(b,b.x-before[bi][0],b.y-before[bi][1]);
  }
 }
 // Compare squared speed at the exact original 0.022 threshold. Avoid a
