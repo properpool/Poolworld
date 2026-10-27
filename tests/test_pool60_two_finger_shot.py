@@ -35,8 +35,8 @@ def handle(page):
     }""")
 
 def touch(cdp,kind,points):
-    # CDP touchEnd/touchCancel points identify CHANGED/ENDED touch IDs,
-    # not the remaining touches. Partial release must name the power finger.
+    # CDP touchEnd points identify ENDED touch IDs, not remaining touches.
+    # touchCancel requires an EMPTY touchPoints list by protocol.
     cdp.send('Input.dispatchTouchEvent',{'type':kind,
        'touchPoints':[{'x':p['x'],'y':p['y'],'id':i} for i,p in points]})
 
@@ -119,7 +119,7 @@ with sync_playwright() as pw:
             touch(cdp,'touchStart',[(1,aim0),(2,h0)])
             touch(cdp,'touchMove',[(1,aim0),(2,powerEnd)])
             touch(cdp,'touchEnd',[(2,powerEnd)])
-            touch(cdp,'touchCancel',[(1,aim0)])
+            touch(cdp,'touchCancel',[])
             cancelled=state(page)
             check(tag+' cancelled aim discards pending shot but retains power',
                   not cancelled['shooting'] and cancelled['aimPointer'] is None and
