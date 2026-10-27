@@ -51,15 +51,20 @@ with sync_playwright() as pw:
         expected=40*.13*math.pi/180
         check(label+' vertical thumb drag rotates horizontal cue',
               err(angle,expected)<.002,{'actual':angle,'expected':expected})
+        touch(cdp,'touchEnd',cx+6,cy+44)
+        check(label+' vertical release retains aim and clears capture',
+              err(page.evaluate('aim'),expected)<.002 and page.evaluate(
+              '!dragAim && !aimFineDrag && aimPointer===null'))
+        # Separate upward gesture avoids a CDP synthetic touchMove jumping
+        # through the initial touch point, which can suppress a move event.
+        page.evaluate('rack();aim=0')
+        touch(cdp,'touchStart',cx+6,cy+4)
         touch(cdp,'touchMove',cx+6,cy-32)
         angle=page.evaluate('aim')
         expected=-36*.13*math.pi/180
         check(label+' opposite vertical drag reverses cue rotation',
               err(angle,expected)<.002,{'actual':angle,'expected':expected})
         touch(cdp,'touchEnd',cx+6,cy-32)
-        check(label+' vertical release retains aim and clears capture',
-              err(page.evaluate('aim'),expected)<.002 and page.evaluate(
-              '!dragAim && !aimFineDrag && aimPointer===null'))
         check(label+' vertical aim controls actual shot direction',
               page.evaluate('''() => {
                 breakShot=false;showPower(75);shoot();
@@ -85,11 +90,15 @@ with sync_playwright() as pw:
         touch(cdp,'touchMove',cx+6,cy+44)
         check(label+' along-cue vertical movement stays stable',
               err(page.evaluate('aim'),-math.pi/2)<.002)
-        touch(cdp,'touchMove',cx+46,cy+44)
+        touch(cdp,'touchEnd',cx+6,cy+44)
+        page.evaluate('rack();aim=-Math.PI/2')
+        touch(cdp,'touchStart',cx+6,cy+4)
+        touch(cdp,'touchMove',cx+46,cy+4)
         expected=-math.pi/2+40*.13*math.pi/180
         check(label+' perpendicular horizontal fine drag preserved',
-              err(page.evaluate('aim'),expected)<.002)
-        touch(cdp,'touchEnd',cx+46,cy+44)
+              err(page.evaluate('aim'),expected)<.002,
+              {'actual':page.evaluate('aim'),'expected':expected})
+        touch(cdp,'touchEnd',cx+46,cy+4)
         # Far-table touches must retain direct absolute pointing.
         page.evaluate('rack();aim=0')
         x=box['x']+box['width']*.8
