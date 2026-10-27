@@ -92,6 +92,9 @@ with sync_playwright() as pw:
                   not held['shooting'] and held['aimPointer'] is not None and
                   held['power']>70 and held['queued'] is True,
                   {'before':before,'after':held})
+            # Chromium may coalesce the first single-pointer move after
+            # ending the second touch; the next move flushes both updates.
+            touch(cdp,'touchMove',[(1,screen(page,700,335))])
             touch(cdp,'touchMove',[(1,aim2)])
             final=state(page)
             check(tag+' aim can still move after power finger lifts',
