@@ -180,6 +180,8 @@ jobs:
         run: python tests/test_pool60_two_finger_shot.py
       - name: Foul placement reset, undo and confirm gesture safety
         run: python tests/test_pool60_placement_transition.py
+      - name: Reset and UNDO cancel stale aim, power and queued multitouch shots
+        run: python tests/test_pool60_gesture_transition.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
