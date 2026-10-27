@@ -756,7 +756,12 @@ function settled(){
 // retains the original eight-step safety limit. Idle owes no simulation time.
 // This preserves shot speed, NOT visual smoothness at a genuinely low FPS.
 function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.25)):0;last=t;if(shooting){
- slowFrameStreak=elapsed>=.075&&elapsed<=.175?Math.min(3,slowFrameStreak+1):0;
+ // A sustained 13.5-14.5fps callback (69-74ms) needs 8.3-8.9 physics
+ // ticks, more than the normal eight-step budget. Previously the 75ms
+ // threshold never enabled catch-up and cue shots ran in slow motion.
+ // 64ms catches the gap below 15fps while one-off hitches still use
+ // the original eight-step budget until the second consecutive slow frame.
+ slowFrameStreak=elapsed>=.064&&elapsed<=.175?Math.min(3,slowFrameStreak+1):0;
  // The first 6fps callback retains ~100ms of unprocessed simulation.
  // A 250ms cap on the second callback silently discards 16.7ms of play.
  // Allow 300ms ONLY after sustained low-FPS is established; isolated hitches
