@@ -994,8 +994,15 @@ function finishAim(e){if(e.pointerId!==aimPointer)return;
  // A release outside the table must NOT snap the aim to an off-cloth point.
  if(e.type==='pointerup'){
   const bounds=canvas.getBoundingClientRect();
-  if(e.clientX>=bounds.left&&e.clientX<=bounds.right&&
-     e.clientY>=bounds.top&&e.clientY<=bounds.bottom)pointAim(e);
+  const inside=e.clientX>=bounds.left&&e.clientX<=bounds.right&&
+     e.clientY>=bounds.top&&e.clientY<=bounds.bottom;
+  // A captured cue-side/precision drag can finish just beyond the canvas
+  // after a coalesced release. Commit that final fine adjustment, but
+  // reject distant off-table releases to avoid wild cue rotation.
+  const nearFineEdge=(precisionAim||aimFineDrag)&&
+     e.clientX>=bounds.left-32&&e.clientX<=bounds.right+32&&
+     e.clientY>=bounds.top-32&&e.clientY<=bounds.bottom+32;
+  if(inside||nearFineEdge)pointAim(e);
  }
  renderDirty=true;
  // An interrupted mobile gesture is not an intentional change of direction.
