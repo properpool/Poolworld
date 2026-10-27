@@ -105,6 +105,10 @@ function collideJaw(b){
 }
 
 const colors=['#f6f1e8','#f2d34b','#286bc4','#d34345','#6e46a5','#e98b3b','#35834a','#7b352e','#181d22','#e3c343','#275db1','#d44b55','#784e9b','#e58b35','#2d8451','#7a4032'];
+// Held fine-aim buttons are active input owners just like aim/power drags.
+// Retire them on rack, undo and SHOOT so their timers cannot mutate a later turn.
+const fineAimHoldCancels=[];
+function abandonFineAimHolds(){for(const cancel of fineAimHoldCancels)cancel()}
 let balls=[],aim=-Math.PI/2,dragAim=false,shooting=false,power=45,powerDrag=false,powerY=0,spin=0,follow=0,guide=true,history=null,events=[],lastSound={},soundOn=true;
 // Busy 120Hz shots emit rail, ball and pocket sound events every tick.
 // Reuse two-element records across frames without changing event ordering,
@@ -124,7 +128,7 @@ const remainingFor=p=>balls.filter(b=>!b.potted&&groupOf(b.id)===groups[p]).leng
 function canPlace(x,y){return Number.isFinite(x)&&Number.isFinite(y)&&x>=L+rad+2&&x<=R-rad-2&&y>=T+rad+2&&y<=B-rad-2&&!holes.some(([hx,hy])=>Math.hypot(x-hx,y-hy)<pocket+rad*.2)&&jaws.every(([jx,jy])=>Math.hypot(x-jx,y-jy)>=rad+jawRadius+.1)&&balls.every(b=>b.id===0||b.potted||Math.hypot(b.x-x,b.y-y)>=2*rad+.5)}
 function cuePosition(){const x0=L+(R-L)*.24,y0=(T+B)/2;if(canPlace(x0,y0))return [x0,y0];for(let y=T+rad+6;y<=B-rad-6;y+=rad*2.3)for(let x=L+rad+6;x<=R-rad-6;x+=rad*2.3)if(canPlace(x,y))return [x,y];return [x0,y0]}
 function snapshot(){return {balls:balls.map(b=>({...b,rollQ:b.rollQ?[...b.rollQ]:[1,0,0,0]})),turn,groups:{...groups},ballInHand,gameOver,winner,breakShot,aim,power,spin,follow}}
-function restore(state){abandonCuePlacementGesture();abandonActiveShotGestures();balls=state.balls.map(b=>({...b,rollQ:b.rollQ?[...b.rollQ]:[1,0,0,0]}));turn=state.turn;groups={...state.groups};ballInHand=state.ballInHand;gameOver=state.gameOver;winner=state.winner;breakShot=state.breakShot;aim=state.aim;power=state.power??power;spin=state.spin??spin;follow=state.follow??follow;shooting=false;shot=null;cueStrike=null;pendingAimReleaseShot=false;events.length=0;accumulator=0;showPower(power);$('spin').value=spin;$('follow').value=follow;updateHUD()}
+function restore(state){abandonCuePlacementGesture();abandonActiveShotGestures();abandonFineAimHolds();balls=state.balls.map(b=>({...b,rollQ:b.rollQ?[...b.rollQ]:[1,0,0,0]}));turn=state.turn;groups={...state.groups};ballInHand=state.ballInHand;gameOver=state.gameOver;winner=state.winner;breakShot=state.breakShot;aim=state.aim;power=state.power??power;spin=state.spin??spin;follow=state.follow??follow;shooting=false;shot=null;cueStrike=null;pendingAimReleaseShot=false;events.length=0;accumulator=0;showPower(power);$('spin').value=spin;$('follow').value=follow;updateHUD()}
 function pocketBall(b){if(b.potted)return;b.potted=true;b.vx=b.vy=0;if(shot){shot.pocketed.push(b.id);if(b.id===0)shot.scratch=true}queueSound('pocket',.85)}
 function resolveShot(){if(!shot)return;const s=shot;shot=null;shooting=false;cueStrike=null;
 // The whole table has settled. A frozen side-spin or follow value must not
@@ -200,7 +204,7 @@ function rollMarker(q,p,out){
 }
 const ROLL_STRIPE_AXIS=[0,1,0],ROLL_MARKER_OUT=[0,0,0];
 const ROLL_MEASLE_MARKS=[[0,0,1],[0,0,-1],[1,0,0],[-1,0,0],[0,1,0],[0,-1,0]];
-function rack(){abandonCuePlacementGesture();abandonActiveShotGestures();balls=[makeBall(0,L+(R-L)*.24,(T+B)/2)];const bx=L+(R-L)*.71,cy=(T+B)/2,step=rad*2.035;let ids=[1,9,2,10,8,11,3,12,4,13,5,14,6,15,7],n=0;for(let row=0;row<5;row++)for(let j=0;j<=row;j++){const x=bx+row*step*.866,y=cy+(j-row/2)*step;balls.push(makeBall(ids[n++],x,y))}aim=0;shooting=false;shot=null;cueStrike=null;history=null;events.length=0;accumulator=0;slowFrameStreak=0;pendingAimReleaseShot=false;turn=1;groups={1:null,2:null};ballInHand=false;gameOver=false;winner=null;breakShot=true;$('status').textContent='Player 1 to break. Aim and pull the power handle, or press SHOOT.';updateHUD()}
+function rack(){abandonCuePlacementGesture();abandonActiveShotGestures();abandonFineAimHolds();balls=[makeBall(0,L+(R-L)*.24,(T+B)/2)];const bx=L+(R-L)*.71,cy=(T+B)/2,step=rad*2.035;let ids=[1,9,2,10,8,11,3,12,4,13,5,14,6,15,7],n=0;for(let row=0;row<5;row++)for(let j=0;j<=row;j++){const x=bx+row*step*.866,y=cy+(j-row/2)*step;balls.push(makeBall(ids[n++],x,y))}aim=0;shooting=false;shot=null;cueStrike=null;history=null;events.length=0;accumulator=0;slowFrameStreak=0;pendingAimReleaseShot=false;turn=1;groups={1:null,2:null};ballInHand=false;gameOver=false;winner=null;breakShot=true;$('status').textContent='Player 1 to break. Aim and pull the power handle, or press SHOOT.';updateHUD()}
 function updateHUD(){renderDirty=true;const left=balls.filter(b=>b.id!==0&&!b.potted).length;$('remaining').textContent=left+' balls left';$('player').textContent=`PLAYER ${turn} · ${groups[turn]?groups[turn].toUpperCase():'OPEN TABLE'}`;$('phase').textContent=gameOver?`PLAYER ${winner} WINS`:shooting?'BALLS MOVING':ballInHand?'BALL IN HAND':breakShot?'READY TO BREAK':'READY TO SHOOT';$('shoot').disabled=shooting||gameOver;$('shoot').textContent=ballInHand?'PLACE CUE':'SHOOT';$('shoot').setAttribute('aria-label',ballInHand?'Confirm cue-ball placement':'Shoot the cue ball');$('shoot').style.opacity=$('shoot').disabled?'.55':'1'}
 const bg=document.createElement('canvas');bg.width=W;bg.height=H;const g=bg.getContext('2d');
 function staticTable(){g.clearRect(0,0,W,H);let grad=g.createLinearGradient(0,0,0,H);grad.addColorStop(0,'#1d292b');grad.addColorStop(1,'#060b0e');g.fillStyle=grad;g.fillRect(0,0,W,H);g.fillStyle='#422716';roundRect(g,24,25,W-48,H-50,45);g.fill();g.fillStyle='#9b6033';roundRect(g,33,34,W-66,H-68,37);g.fill();g.fillStyle='#27180f';roundRect(g,47,48,W-94,H-96,28);g.fill();g.fillStyle='#153b38';roundRect(g,L-14,T-14,R-L+28,B-T+28,17);g.fill();const cloth=g.createLinearGradient(0,T,0,B);cloth.addColorStop(0,'#197b67');cloth.addColorStop(.5,'#146453');cloth.addColorStop(1,'#0b4b42');g.fillStyle=cloth;g.fillRect(L,T,R-L,B-T);g.strokeStyle='#e9f0d766';g.lineWidth=1;g.beginPath();g.moveTo(L+(R-L)*.24,T);g.lineTo(L+(R-L)*.24,B);g.stroke();for(let y=T+24;y<B;y+=37){for(let x=L+24;x<R;x+=37){g.fillStyle='#fff';g.globalAlpha=.018;g.fillRect(x,y,1,1)}}g.globalAlpha=1;for(let i=0;i<holes.length;i++){let [x,y]=holes[i];g.beginPath();g.fillStyle='#06080a';g.arc(x,y,pocket+3,0,pi*2);g.fill();g.beginPath();g.strokeStyle='#b38a50';g.lineWidth=5;g.arc(x,y,pocket+4,0,pi*2);g.stroke()}for(let i=1;i<=3;i++){let x=L+(R-L)*i/4;for(let y of [51,519]){g.fillStyle='#ead1a0';g.beginPath();g.arc(x,y,3.2,0,pi*2);g.fill()}}}
@@ -856,7 +860,7 @@ function shotSpeed(level,isBreak=breakShot){
  const p=Math.max(5,Math.min(100,level))/100;
  return (.45+7.9*Math.pow(p,.92))*(isBreak?1.17:1);
 }
-function shoot(){if(shooting||gameOver||ballInHand||balls[0].potted)return false;slowFrameStreak=0;history=snapshot();shot={player:turn,breakShot,firstHit:null,railAfterContact:false,pocketed:[],scratch:false,targetEight:groups[turn]!==null&&remainingFor(turn)===0};const b=balls[0],speed=shotSpeed(power,breakShot);b.vx=Math.cos(aim)*speed;b.vy=Math.sin(aim)*speed;b.spin=spin/100*1.2;b.follow=follow/100*2.5;shooting=true;
+function shoot(){if(shooting||gameOver||ballInHand||balls[0].potted)return false;abandonFineAimHolds();slowFrameStreak=0;history=snapshot();shot={player:turn,breakShot,firstHit:null,railAfterContact:false,pocketed:[],scratch:false,targetEight:groups[turn]!==null&&remainingFor(turn)===0};const b=balls[0],speed=shotSpeed(power,breakShot);b.vx=Math.cos(aim)*speed;b.vy=Math.sin(aim)*speed;b.spin=spin/100*1.2;b.follow=follow/100*2.5;shooting=true;
  cueStrike={x:b.x,y:b.y,aim,power,elapsed:0};
  // The first rendered shot frame can precede its first physics tick.
  // Seed previous positions now, so it cannot interpolate from an old rack.
@@ -1107,13 +1111,25 @@ function bindFineAimHold(id,direction){
  }
  button.addEventListener('pointerdown',e=>{
   if(pointer!==null||e.button!==0||shooting||gameOver||ballInHand)return;
-  pointer=e.pointerId;repeated=false;
+  // A new deliberate gesture is allowed after a previous transaction was retired.
+  suppressClick=false;pointer=e.pointerId;repeated=false;
   button.setPointerCapture(e.pointerId);
   delay=setTimeout(()=>{
    if(pointer!==e.pointerId)return;
    repeated=true;fineAim(direction);
    repeat=setInterval(()=>{if(pointer===e.pointerId)fineAim(direction)},70);
   },270);
+ });
+ // Programmatic match transitions must cancel both pending delay and repeat,
+ // and swallow the old pointer's eventual synthetic click on release.
+ fineAimHoldCancels.push(()=>{
+  if(pointer===null)return;
+  const old=pointer;
+  pointer=null;repeated=false;suppressClick=true;
+  clearTimeout(delay);clearInterval(repeat);delay=null;repeat=null;
+  if(button.hasPointerCapture(old)){
+   try{button.releasePointerCapture(old)}catch(_ignored){}
+  }
  });
  button.addEventListener('pointerup',stop);
  button.addEventListener('pointercancel',stop);
