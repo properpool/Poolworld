@@ -746,7 +746,17 @@ function nearCueTouch(e){
  const guard=Math.max(rad*2,20*W/bounds.width);
  return Math.hypot(p.x-b.x,p.y-b.y)<=guard;
 }
-function pointAim(e){if(shooting||gameOver||ballInHand||balls[0].potted)return;renderDirty=true;
+function pointAim(e){if(shooting||gameOver||ballInHand||balls[0].potted)return;
+ // A captured pointer continues to send moves after the finger leaves the
+ // table. For direct aiming, reject those off-cloth coordinates: otherwise
+ // a last-moment edge slip rotates the cue toward a point outside the board.
+ // Relative cue-side/precision drags deliberately remain continuous outside.
+ if(!precisionAim&&!aimFineDrag){
+  const bounds=canvas.getBoundingClientRect();
+  if(e.clientX<bounds.left||e.clientX>bounds.right||
+     e.clientY<bounds.top||e.clientY>bounds.bottom)return;
+ }
+ renderDirty=true;
  if(precisionAim||aimFineDrag){
   // A touch beginning on the cue ball remains a relative fine-aim drag
   // throughout the gesture, even after the finger crosses the touch guard.
