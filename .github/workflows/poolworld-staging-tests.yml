@@ -150,6 +150,8 @@ jobs:
         run: python tests/test_pool60_power_tap_safety.py
       - name: Two-axis cue-side thumb aiming and shot direction (four viewports)
         run: python tests/test_pool60_fine_aim_2d.py
+      - name: Sustained 10-12fps full-shot motion and 120Hz reference (four viewports)
+        run: python tests/test_pool60_lowfps_motion.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
