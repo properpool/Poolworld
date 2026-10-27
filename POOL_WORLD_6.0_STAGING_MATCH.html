@@ -773,7 +773,11 @@ canvas.addEventListener('pointerup',finishAim);canvas.addEventListener('pointerc
 canvas.addEventListener('lostpointercapture',finishAim);
 const track=$('track');let powerPointer=null,powerStart=45,powerMoved=false;
 function showPower(p){power=Math.max(5,Math.min(100,p));$('strength').value=power;$('powerValue').textContent=Math.round(power)+'%';const h=track.clientHeight;const y=(power-5)/95*(h-22)+11;$('handle').style.top=y+'px';$('fill').style.height=y+'px'}
-function padStart(e){if(shooting||gameOver||ballInHand||powerDrag)return;e.preventDefault();powerDrag=true;powerPointer=e.pointerId;powerY=e.clientY;powerStart=power;powerMoved=false;track.setPointerCapture(e.pointerId)}
+function padStart(e){if(shooting||gameOver||ballInHand||powerDrag)return;
+ // Side margins are an intentional larger thumb target, but the POWER label
+ // and PULL DOWN instruction are not. A tap there must never reset strength.
+ if(e.currentTarget!==track){const r=track.getBoundingClientRect();if(e.clientY<r.top||e.clientY>r.bottom)return}
+ e.preventDefault();powerDrag=true;powerPointer=e.pointerId;powerY=e.clientY;powerStart=power;powerMoved=false;track.setPointerCapture(e.pointerId)}
 // Preserve the selected strength when dragging. The former mapping reset
 // every small downward pull to ~5-20%, making an intended 45% shot weak.
 // A signed relative drag also prevents an upward pull from jumping to the
