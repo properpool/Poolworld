@@ -396,14 +396,16 @@ function cueTipOffset(level,progress=null){
  if(p<=.65)return atRest+(retract+15)*(p/.65);
  return -rad-4-8*((p-.65)/.35);
 }
+const cueShaftGradient=ctx.createLinearGradient(0,-5,0,5);
+cueShaftGradient.addColorStop(0,'#f4db9b');
+cueShaftGradient.addColorStop(.5,'#bd8140');
+cueShaftGradient.addColorStop(1,'#6b3d1d');
 function drawCue(x,y,angle,level,progress=null){
  const tip=cueTipOffset(level,progress),butt=tip-225;
  ctx.save();ctx.translate(x,y);ctx.rotate(angle);
  ctx.strokeStyle='#17110d';ctx.lineWidth=14;ctx.lineCap='round';
  ctx.beginPath();ctx.moveTo(tip,0);ctx.lineTo(butt-5,0);ctx.stroke();
- const shaft=ctx.createLinearGradient(0,-5,0,5);
- shaft.addColorStop(0,'#f4db9b');shaft.addColorStop(.5,'#bd8140');shaft.addColorStop(1,'#6b3d1d');
- ctx.strokeStyle=shaft;ctx.lineWidth=9;
+ ctx.strokeStyle=cueShaftGradient;ctx.lineWidth=9;
  ctx.beginPath();ctx.moveTo(tip,0);ctx.lineTo(butt,0);ctx.stroke();
  ctx.strokeStyle='#e8e4d8';ctx.lineWidth=7;
  ctx.beginPath();ctx.moveTo(tip,0);ctx.lineTo(tip-10,0);ctx.stroke();
