@@ -58,7 +58,7 @@ with sync_playwright() as pw:
   page.set_content(HTML,wait_until='load')
   cdp=page.context.new_cdp_session(page)
   tag=f'{w}x{h}'
-  modes=['normal']+(['big'] if h>w else [])
+  modes=['normal']+(['big'] if h>w and w<=600 else [])
   for mode in modes:
    if mode=='big':page.locator('#focusMode').click()
    initial=foul(page)
