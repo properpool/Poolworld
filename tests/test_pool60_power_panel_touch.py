@@ -59,6 +59,22 @@ with sync_playwright() as pw:
       abs(end['power']-expected)<.05 and not end['shooting'] and
       not end['powerDrag'] and end['powerPointer'] is None,
       {'expected':expected,'actual':end})
+  # Widening the touch target must not make a tap on the POWER label or
+  # PULL DOWN instruction silently reset the chosen shot to 5% or 100%.
+  for selector in ('#powerControl label','#powerControl .tip'):
+   page.evaluate('rack();showPower(45)')
+   b=page.locator(selector).bounding_box()
+   tx=b['x']+b['width']/2
+   ty=b['y']+b['height']/2
+   if cdp:
+    touch(cdp,'touchStart',tx,ty);touch(cdp,'touchEnd',tx,ty)
+   else:
+    page.mouse.move(tx,ty);page.mouse.down();page.mouse.up()
+   state=page.evaluate('''()=>({power,shooting,powerDrag,powerPointer})''')
+   check(f'{w}x{h} {selector} tap leaves chosen strength untouched',
+     abs(state['power']-45)<.01,state)
+   check(f'{w}x{h} {selector} tap never starts a shot or stuck drag',
+     not state['shooting'] and not state['powerDrag'] and state['powerPointer'] is None,state)
   check(f'{w}x{h} no JavaScript exceptions',not errors,errors)
   page.close()
  browser.close()
