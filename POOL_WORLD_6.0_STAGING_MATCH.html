@@ -322,7 +322,7 @@ function render(){ctx.clearRect(0,0,W,H);ctx.drawImage(bg,0,0);if(!shooting&&!ga
  if(ballInHand){ctx.save();ctx.strokeStyle='#ffdb79';ctx.lineWidth=3;ctx.setLineDash([6,6]);ctx.beginPath();ctx.arc(balls[0].x,balls[0].y,rad+7,0,pi*2);ctx.stroke();ctx.restore()}}
 function drawAim(){const c=balls[0],dx=Math.cos(aim),dy=Math.sin(aim);if(guide){ctx.setLineDash([9,8]);ctx.lineWidth=2.4;ctx.strokeStyle='#f7f5dcdd';ctx.beginPath();ctx.moveTo(c.x+dx*rad,c.y+dy*rad);let hit=900,object=null;for(let b of balls){if(b.id===0||b.potted)continue;const ox=b.x-c.x,oy=b.y-c.y,proj=ox*dx+oy*dy,perp2=ox*ox+oy*oy-proj*proj;if(proj>0&&perp2<(2*rad)**2){let d=proj-Math.sqrt((2*rad)**2-perp2);if(d<hit){hit=d;object=b}}}if(!object){const tx=dx>0?(R-rad-c.x)/dx:(L+rad-c.x)/dx,ty=dy>0?(B-rad-c.y)/dy:(T+rad-c.y)/dy;hit=Math.min(tx>0?tx:900,ty>0?ty:900)}ctx.lineTo(c.x+dx*hit,c.y+dy*hit);ctx.stroke();ctx.setLineDash([]);if(object){const hx=c.x+dx*hit,hy=c.y+dy*hit;ctx.strokeStyle='#ffffff80';ctx.beginPath();ctx.arc(hx,hy,rad,0,pi*2);ctx.stroke();const nx=(object.x-hx)/(2*rad),ny=(object.y-hy)/(2*rad);ctx.strokeStyle='#ffe1a6bb';ctx.setLineDash([4,5]);ctx.beginPath();ctx.moveTo(object.x,object.y);ctx.lineTo(object.x+nx*100,object.y+ny*100);ctx.stroke();ctx.setLineDash([])}}ctx.save();ctx.translate(c.x,c.y);ctx.rotate(aim);ctx.strokeStyle='#17110d';ctx.lineWidth=14;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-rad-19,0);ctx.lineTo(-250,0);ctx.stroke();const shaft=ctx.createLinearGradient(0,-5,0,5);shaft.addColorStop(0,'#f4db9b');shaft.addColorStop(.5,'#bd8140');shaft.addColorStop(1,'#6b3d1d');ctx.strokeStyle=shaft;ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(-rad-19,0);ctx.lineTo(-245,0);ctx.stroke();ctx.strokeStyle='#e8e4d8';ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(-rad-19,0);ctx.lineTo(-rad-29,0);ctx.stroke();ctx.restore()}
 // Physics: fixed 120Hz steps; translational and rotational impulses bounded.
-const STEP=1/120,POCKET_CAPTURE_RADIUS2=(pocket*.74)**2;let accumulator=0,last=0,renderDirty=true;
+const STEP=1/120,POCKET_CAPTURE_RADIUS2=(pocket*.74)**2;let accumulator=0,last=0,renderDirty=true,slowFrameStreak=0;
 // Determine which object the cue reaches first within a physics tick.
 // Iteration order through the rack is not a valid substitute for contact time:
 // in a tight cluster the cue can overlap two balls during the same 120Hz tick.
@@ -707,17 +707,16 @@ function settled(){
  return true;
 }
 // Preserve transient render hitches without an unbounded catch-up burst.
-// At a sustained 10-12fps, however, an eight-tick limit can process only
-// 8/12 of the 120Hz physics owed each 100ms: the whole shot visibly plays
-// in slow motion. Permit enough ticks for the observed 75-125ms cadence,
-// plus up to two debt-recovery ticks, with a strict 15-tick ceiling.
-// Keep the original eight-tick limit for isolated 150-250ms hitches;
-// that debt drains across subsequent frames. Idle frames owe no time.
+// At sustained 10-12fps, eight ticks per 100ms process only 2/3 of the
+// 120Hz motion, making every shot visibly slow. After TWO consecutive
+// 75-125ms gaps, permit real-time ticks plus up to two debt-recovery ticks,
+// capped at 15. One-off 100ms GC stalls and 150-250ms hitches retain the
+// original eight-tick safety budget. Idle frames owe no simulation time.
 function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.25)):0;last=t;if(shooting){
  accumulator=Math.min(.25,accumulator+elapsed);
- }else accumulator=0;
- const sustainedLowFps=elapsed>=.075&&elapsed<=.125;
- const tickBudget=sustainedLowFps?Math.min(15,Math.ceil(elapsed/STEP)+2):8;
+ slowFrameStreak=elapsed>=.075&&elapsed<=.125?Math.min(3,slowFrameStreak+1):0;
+ }else{accumulator=0;slowFrameStreak=0}
+ const tickBudget=slowFrameStreak>=2?Math.min(15,Math.ceil(elapsed/STEP)+2):8;
  let n=0;while(shooting&&accumulator>=STEP&&n<tickBudget){physics(STEP);accumulator-=STEP;n++}if(shooting){for(let i=0;i<Math.min(events.length,8);i++){const [kind,v]=events[i];sound(kind,v)}events.length=0;if(settled())resolveShot()}if(shooting||renderDirty){interpolateVisual=shooting;render();interpolateVisual=false;renderDirty=false}requestAnimationFrame(frame)}
 // Calibrated to table dimensions: mid-power shots must cross the table,
 // while short finesse shots remain possible. This is a gameplay tuning curve,
