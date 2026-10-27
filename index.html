@@ -554,7 +554,20 @@ function physics(dt){
   prev[0]=q[0];prev[1]=q[1];prev[2]=q[2];prev[3]=q[3];
  }
  const before=beforePositions,scale=dt*60;for(let bi=0;bi<balls.length;bi++){const b=balls[bi];if(b.potted)continue;const speed=Math.hypot(b.vx,b.vy);if(speed>0){const decel=(.012+.0016*Math.min(speed,4))*scale;const f=Math.max(0,(speed-decel)/speed);b.vx*=f;b.vy*=f;if(speed<.021){b.vx=b.vy=0}const dx=b.vx*scale,dy=b.vy*scale;b.x+=dx;b.y+=dy;// Side-spin (English) changes rail contacts, not the free-flight path of a rolling ball.
-      b.spin*=Math.pow(.984,scale);b.follow*=Math.pow(.995,scale)}for(const [hx,hy] of holes){const pdx=b.x-hx,pdy=b.y-hy;if(pdx*pdx+pdy*pdy<POCKET_CAPTURE_RADIUS2){pocketBall(b);break}}if(b.potted)continue;collideJaw(b);constrainRail(b);
+      b.spin*=Math.pow(.984,scale);b.follow*=Math.pow(.995,scale)}// Test the swept centre path, not only its endpoint. A shallow pocket
+ // crossing can enter and leave the capture circle within one 120Hz tick
+ // while both endpoint samples remain outside, making a genuine pot vanish.
+ // Reject distant wells first so normal central-table travel stays cheap.
+ const fromX=before[bi][0],fromY=before[bi][1],travelX=b.x-fromX,travelY=b.y-fromY;
+ const travel2=travelX*travelX+travelY*travelY,capture=pocket*.74;
+ for(const [hx,hy] of holes){
+  if(Math.abs(b.x-hx)>capture+Math.abs(travelX)||
+     Math.abs(b.y-hy)>capture+Math.abs(travelY))continue;
+  const along=travel2>1e-12?
+   Math.max(0,Math.min(1,((hx-fromX)*travelX+(hy-fromY)*travelY)/travel2)):1;
+  const pdx=fromX+along*travelX-hx,pdy=fromY+along*travelY-hy;
+  if(pdx*pdx+pdy*pdy<POCKET_CAPTURE_RADIUS2){pocketBall(b);break}
+ }if(b.potted)continue;collideJaw(b);constrainRail(b);
  // Roll the visible sphere by its ACTUAL travel after rail and jaw constraints.
  // The proposed free-flight step can overshoot a cushion; rotating by that
  // overshoot made the ball texture visibly skid at hard rail contacts.
