@@ -330,7 +330,14 @@ function blendedRoll(i,alpha){
  return q;
 }
 function render(){ctx.clearRect(0,0,W,H);ctx.drawImage(bg,0,0);if(!shooting&&!gameOver&&!ballInHand&&!balls[0].potted){drawAim()}
- else if(shooting&&cueStrike){drawCue(cueStrike.x,cueStrike.y,cueStrike.aim,cueStrike.power,cueStrike.elapsed/CUE_STROKE_DURATION)}
+ else if(shooting&&cueStrike){
+  // shoot() applies the physical cue impulse immediately. Start the visible
+  // stroke AT contact, not 104ms behind an already-moving cue ball. The
+  // pre-shot aiming pose shows the power-dependent pullback; the moving
+  // shot frame shows the follow-through/withdrawal in synchrony with motion.
+  const followThrough=.65+.35*Math.min(1,cueStrike.elapsed/CUE_STROKE_DURATION);
+  drawCue(cueStrike.x,cueStrike.y,cueStrike.aim,cueStrike.power,followThrough);
+ }
  const blend=interpolateVisual&&shooting&&beforePositions.length===balls.length&&beforeRollQ.length===balls.length;
  const alpha=blend?Math.max(0,Math.min(1,accumulator/STEP)):1;
  for(let i=0;i<balls.length;i++){
