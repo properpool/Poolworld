@@ -737,7 +737,7 @@ function shoot(){if(shooting||gameOver||ballInHand||balls[0].potted)return false
  }
  events.length=0;sound('cue',Math.max(.3,power/90));updateHUD();$('status').textContent='Shot in progress…';return true}
 function pointerCoords(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
-let lastAim=aim,precisionAim=false,aimPointer=null,aimStartX=0,aimStartAngle=0,aimFineDrag=false;
+let lastAim=aim,precisionAim=false,aimPointer=null,aimStartX=0,aimStartY=0,aimStartAngle=0,aimFineDrag=false;
 function nearCueTouch(e){
  if(e.pointerType!=='touch'&&e.pointerType!=='pen')return false;
  const p=pointerCoords(e),b=balls[0],bounds=canvas.getBoundingClientRect();
@@ -749,7 +749,13 @@ function pointAim(e){if(shooting||gameOver||ballInHand||balls[0].potted)return;r
   // A touch beginning on the cue ball remains a relative fine-aim drag
   // throughout the gesture, even after the finger crosses the touch guard.
   // This prevents a sudden cue-angle jump on small phone screens.
-  aim=aimStartAngle+(e.clientX-aimStartX)*(pi/180)*.13;lastAim=aim;
+  // Existing horizontal fine-aim remains 0.13 degrees per CSS pixel.
+  // Also use vertical thumb travel when the cue points horizontally:
+  // previously an entirely vertical drag did NOTHING, making horizontal
+  // shots difficult to line up on narrow touchscreens. The cos projection
+  // prevents a thumb moving along a vertical cue from rotating it.
+  const dx=e.clientX-aimStartX,dy=e.clientY-aimStartY;
+  aim=aimStartAngle+(dx+dy*Math.cos(aimStartAngle))*(pi/180)*.13;lastAim=aim;
  }else{
   const p=pointerCoords(e),b=balls[0],a=Math.atan2(p.y-b.y,p.x-b.x);
   // A finger landing over the tiny cue ball must not unexpectedly snap the aim.
@@ -761,7 +767,7 @@ function pointAim(e){if(shooting||gameOver||ballInHand||balls[0].potted)return;r
 }
 canvas.addEventListener('pointerdown',e=>{if(shooting||gameOver||aimPointer!==null)return;
  if(ballInHand){const p=pointerCoords(e);if(canPlace(p.x,p.y)){balls[0].x=p.x;balls[0].y=p.y;ballInHand=false;updateHUD();$('status').textContent='Cue ball placed. Aim and shoot.'}else{$('status').textContent='Invalid placement — keep the cue ball inside the cloth and clear of other balls.'}return}
- aimPointer=e.pointerId;dragAim=true;aimStartX=e.clientX;aimStartAngle=aim;
+ aimPointer=e.pointerId;dragAim=true;aimStartX=e.clientX;aimStartY=e.clientY;aimStartAngle=aim;
  aimFineDrag=nearCueTouch(e);canvas.setPointerCapture(e.pointerId);
  if(!precisionAim&&!aimFineDrag)pointAim(e)
 });
