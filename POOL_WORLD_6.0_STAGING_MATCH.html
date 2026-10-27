@@ -913,7 +913,7 @@ function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.25)):0;las
  // Isolated 180-240ms browser stalls still get at most eight ticks.
  accumulator=Math.min(slowFrameStreak>=2?.50:.25,accumulator+elapsed);
  }else{accumulator=0;slowFrameStreak=0}
- const tickBudget=slowFrameStreak>=2?Math.min(28,Math.ceil(elapsed/STEP)+2):8;
+ const tickBudget=slowFrameStreak>=2?Math.min(elapsed>.175?28:22,Math.ceil(elapsed/STEP)+2):8;
  let n=0;while(shooting&&accumulator>=STEP&&n<tickBudget){physics(STEP);accumulator-=STEP;n++}if(shooting){for(let i=0;i<Math.min(events.length,8);i++){const [kind,v]=events[i];sound(kind,v)}events.length=0;if(settled())resolveShot()}if(shooting||renderDirty){interpolateVisual=shooting;render();interpolateVisual=false;renderDirty=false}requestAnimationFrame(frame)}
 // Calibrated to table dimensions: mid-power shots must cross the table,
 // while short finesse shots remain possible. This is a gameplay tuning curve,
