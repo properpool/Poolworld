@@ -784,12 +784,15 @@ canvas.addEventListener('pointerup',finishAim);canvas.addEventListener('pointerc
 // The OS/browser may revoke capture without a pointerup on the table.
 // Treat that as an interrupted gesture, restoring aim and unlocking touch.
 canvas.addEventListener('lostpointercapture',finishAim);
-const track=$('track');let powerPointer=null,powerStart=45,powerMoved=false;
+const track=$('track');let powerPointer=null,powerStart=45,powerMoved=false,powerTapOnBareTrack=false;
 function showPower(p){power=Math.max(5,Math.min(100,p));$('strength').value=power;$('powerValue').textContent=Math.round(power)+'%';const h=track.clientHeight;const y=(power-5)/95*(h-22)+11;$('handle').style.top=y+'px';$('fill').style.height=y+'px'}
 function padStart(e){if(shooting||gameOver||ballInHand||powerDrag)return;
  // Side margins are an intentional larger thumb target, but the POWER label
  // and PULL DOWN instruction are not. A tap there must never reset strength.
  if(e.currentTarget!==track){const r=track.getBoundingClientRect();if(e.clientY<r.top||e.clientY>r.bottom)return}
+ // Only a deliberate bare-track tap changes absolute power. Touching the
+ // handle or widened side margins must retain the chosen shot strength.
+ powerTapOnBareTrack=e.target===track||e.target===$('fill');
  e.preventDefault();powerDrag=true;powerPointer=e.pointerId;powerY=e.clientY;powerStart=power;powerMoved=false;track.setPointerCapture(e.pointerId)}
 // Preserve the selected strength when dragging. The former mapping reset
 // every small downward pull to ~5-20%, making an intended 45% shot weak.
@@ -806,13 +809,13 @@ function padMove(e){if(!powerDrag||e.pointerId!==powerPointer)return;e.preventDe
  if(Math.abs(dy)>5)showPower(powerFromDrag(dy,powerStart,r.height));
 }
 function padEnd(e){if(!powerDrag||e.pointerId!==powerPointer)return;
- const dy=e.clientY-powerY,prior=powerStart;
- powerDrag=false;powerPointer=null;
+ const dy=e.clientY-powerY,prior=powerStart,trackTap=powerTapOnBareTrack;
+ powerDrag=false;powerPointer=null;powerTapOnBareTrack=false;
  if(e.type==='pointercancel'||e.type==='lostpointercapture'){showPower(prior);return}
  if(e.type==='pointerup'){
   if(Math.abs(dy)<=5){
    if(powerMoved)showPower(prior);
-   else if(Math.abs(power-prior)<=.5){const r=track.getBoundingClientRect();showPower(5+(e.clientY-r.top)/r.height*95)}
+   else if(trackTap&&Math.abs(power-prior)<=.5){const r=track.getBoundingClientRect();showPower(5+(e.clientY-r.top)/r.height*95)}
    return;
   }
   // Some browsers coalesce a quick swipe into pointerdown + pointerup,
