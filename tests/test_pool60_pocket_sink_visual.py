@@ -32,9 +32,11 @@ with sync_playwright() as pw:
           const records=[];
           let current=0;
           drawBall=function(b,...rest){
-            if(!b.potted && (b.id===1||b.id===9)){
-              const m=ctx.getTransform();
-              records.push({t:current,id:b.id,scale:Math.hypot(m.a,m.b),
+            const m=ctx.getTransform(),scale=Math.hypot(m.a,m.b);
+            // Only count an animated sink, never an ordinary live rack ball.
+            if(!b.potted && (b.id===1||b.id===9) &&
+               (scale<.999 || ctx.globalAlpha<.999)){
+              records.push({t:current,id:b.id,scale,
                             alpha:ctx.globalAlpha,x:b.x,y:b.y});
             }
             return oldDraw(b,...rest);
