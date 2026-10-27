@@ -848,6 +848,19 @@ for(let ci=0;ci<contacts.length;){
   }
   if(unresolved)projectRailContactOverlaps();
  }
+ // Ball-ball contact and rail/jaw overlap projection run AFTER the first
+ // swept pocket pass. Their final positional corrections can put a resting
+ // ball inside a real pocket well with no remaining velocity. Capture it
+ // before settled() ends the shot; otherwise a legitimate late pot is lost.
+ // This is an endpoint check only: the earlier swept pass still handles
+ // moving paths and no physics impulse, shot power or rail geometry changes.
+ for(const b of balls){
+  if(b.potted)continue;
+  for(const [hx,hy] of holes){
+   const dx=b.x-hx,dy=b.y-hy;
+   if(dx*dx+dy*dy<POCKET_CAPTURE_RADIUS2){pocketBall(b);break}
+  }
+ }
  // The displayed sphere must rotate by the same FINAL net displacement
  // that the renderer will show for this tick. Keep the physics and impulses
  // unchanged; only visual orientation is updated after collision projection.
