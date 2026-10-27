@@ -917,7 +917,43 @@ track.addEventListener('pointerdown',padStart);track.addEventListener('pointermo
 // or trigger a shot; a completed pointerup has already cleared powerDrag.
 track.addEventListener('lostpointercapture',padEnd);
 function fineAim(direction){if(shooting||gameOver||ballInHand)return;aim+=direction*pi/360;lastAim=aim;render()}
-$('aimLeft').onclick=()=>fineAim(-1);$('aimRight').onclick=()=>fineAim(1);
+// On a phone the 0.5-degree nudge buttons previously required dozens of
+// individual taps to make even a small adjustment. Keep short taps and
+// keyboard clicks at exactly 0.5 degrees, but repeat while a finger is held.
+// No repeat timer survives pointerup, cancellation, or lost capture.
+function bindFineAimHold(id,direction){
+ const button=$(id);
+ let pointer=null,delay=null,repeat=null,repeated=false,suppressClick=false;
+ function stop(e){
+  if(pointer===null||(e&&e.pointerId!==pointer))return;
+  clearTimeout(delay);clearInterval(repeat);
+  pointer=null;delay=null;repeat=null;
+  if(repeated){
+   // A browser synthesizes click after pointerup even on a long press.
+   // Ignore that one pointer click so it cannot add an unwanted extra step.
+   suppressClick=true;
+   setTimeout(()=>{suppressClick=false},500);
+  }
+ }
+ button.addEventListener('pointerdown',e=>{
+  if(pointer!==null||e.button!==0||shooting||gameOver||ballInHand)return;
+  pointer=e.pointerId;repeated=false;
+  button.setPointerCapture(e.pointerId);
+  delay=setTimeout(()=>{
+   if(pointer!==e.pointerId)return;
+   repeated=true;fineAim(direction);
+   repeat=setInterval(()=>{if(pointer===e.pointerId)fineAim(direction)},70);
+  },270);
+ });
+ button.addEventListener('pointerup',stop);
+ button.addEventListener('pointercancel',stop);
+ button.addEventListener('lostpointercapture',stop);
+ button.addEventListener('click',e=>{
+  if(suppressClick&&e.detail>0){suppressClick=false;e.preventDefault();return}
+  fineAim(direction);
+ });
+}
+bindFineAimHold('aimLeft',-1);bindFineAimHold('aimRight',1);
 $('precision').onclick=()=>{precisionAim=!precisionAim;$('precision').textContent='PRECISION: '+(precisionAim?'ON':'OFF');$('precision').setAttribute('aria-pressed',String(precisionAim))};
 function confirmCuePlacement(){
  if(!ballInHand||shooting||gameOver)return false;
