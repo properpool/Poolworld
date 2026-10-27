@@ -706,16 +706,19 @@ function settled(){
  }
  return true;
 }
-// A brief 100-250ms render stall must not erase shot motion. Carry bounded
-// 120Hz simulation debt into later callbacks rather than discarding elapsed
-// time; limit each callback to eight physics ticks to avoid a catch-up burst.
-// While idle, no simulation time is owed by the next shot.
+// Preserve transient render hitches without an unbounded catch-up burst.
+// At a sustained 10-12fps, however, an eight-tick limit can process only
+// 8/12 of the 120Hz physics owed each 100ms: the whole shot visibly plays
+// in slow motion. Permit enough ticks for the observed 75-125ms cadence,
+// plus up to two debt-recovery ticks, with a strict 15-tick ceiling.
+// Keep the original eight-tick limit for isolated 150-250ms hitches;
+// that debt drains across subsequent frames. Idle frames owe no time.
 function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.25)):0;last=t;if(shooting){
- // Preserve a transient hitch, but bound simulation debt during sustained
- // low FPS. At 10fps an eight-step budget cannot process 120Hz in real time;
- // banking seconds of debt would fast-forward shots after the phone recovers.
  accumulator=Math.min(.25,accumulator+elapsed);
- }else accumulator=0;let n=0;while(shooting&&accumulator>=STEP&&n<8){physics(STEP);accumulator-=STEP;n++}if(shooting){for(let i=0;i<Math.min(events.length,8);i++){const [kind,v]=events[i];sound(kind,v)}events.length=0;if(settled())resolveShot()}if(shooting||renderDirty){interpolateVisual=shooting;render();interpolateVisual=false;renderDirty=false}requestAnimationFrame(frame)}
+ }else accumulator=0;
+ const sustainedLowFps=elapsed>=.075&&elapsed<=.125;
+ const tickBudget=sustainedLowFps?Math.min(15,Math.ceil(elapsed/STEP)+2):8;
+ let n=0;while(shooting&&accumulator>=STEP&&n<tickBudget){physics(STEP);accumulator-=STEP;n++}if(shooting){for(let i=0;i<Math.min(events.length,8);i++){const [kind,v]=events[i];sound(kind,v)}events.length=0;if(settled())resolveShot()}if(shooting||renderDirty){interpolateVisual=shooting;render();interpolateVisual=false;renderDirty=false}requestAnimationFrame(frame)}
 // Calibrated to table dimensions: mid-power shots must cross the table,
 // while short finesse shots remain possible. This is a gameplay tuning curve,
 // not a measurement of a real cue's impulse.
