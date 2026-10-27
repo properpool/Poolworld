@@ -30,8 +30,8 @@ cases=[
 ]
 def expected(c,o,a):
     dx,dy=math.cos(a),math.sin(a)
-    tx=(1021-12.2-c[0])/dx if dx>0 else (79+12.2-c[0])/dx
-    ty=(492-12.2-c[1])/dy if dy>0 else (78+12.2-c[1])/dy
+    tx=((1021-12.2-c[0])/dx if dx>0 else (79+12.2-c[0])/dx) if abs(dx)>1e-12 else float('inf')
+    ty=((492-12.2-c[1])/dy if dy>0 else (78+12.2-c[1])/dy) if abs(dy)>1e-12 else float('inf')
     rail=min(v for v in (tx,ty) if v>0)
     ox,oy=o[0]-c[0],o[1]-c[1]
     proj=ox*dx+oy*dy
