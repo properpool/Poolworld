@@ -182,6 +182,8 @@ jobs:
         run: python tests/test_pool60_placement_transition.py
       - name: Reset and UNDO cancel stale aim, power and queued multitouch shots
         run: python tests/test_pool60_gesture_transition.py
+      - name: Held fine-aim gesture transaction safety across reset, undo and shoot
+        run: python tests/test_pool60_fine_aim_transaction.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
