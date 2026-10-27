@@ -1,7 +1,7 @@
 """Pool World v9.8 sustained low-FPS debt and real Chromium input/rAF diagnostics.
 
 Transient 150ms hitches must preserve physics time, but sustained low frame
-rates must not accumulate seconds of stale catch-up that fast-forwards shots
+rates must advance in real time without accumulating stale catch-up that fast-forwards shots
 after the device recovers. The live rAF/input measurements use Chromium, NOT
 the physical Samsung display, GPU, or touchscreen.
 """
@@ -70,8 +70,8 @@ with sync_playwright() as pw:
         slow=data['slow'];recovered=data['recovered'];restart=data['restart']
         check(label+' sustained low-fps shot remains finite and active',
             slow['active'] and slow['finite'],slow)
-        check(label+' 10fps callback physics remains capped at eight ticks',
-            slow['maxTicks']<=8 and slow['ticks']>=600,slow)
+        check(label+' sustained 10fps processes real-time 120Hz physics within 15-tick budget',
+            slow['maxTicks']<=15 and slow['ticks']>=950,slow)
         check(label+' prolonged 10fps never banks more than 250ms debt',
             slow['debt']<=.25+1e-6,slow)
         check(label+' recovered 60fps clears stale debt within 30 frames',
