@@ -522,7 +522,15 @@ function earliestCueContact(before){
   if(t!==null&&t>=0&&t<=1&&(!first||t<first.t-1e-9||(Math.abs(t-first.t)<=1e-9&&b.id<first.id)))
    first={id:b.id,t};
  }
- if(first)shot.firstHit=first.id;
+ if(first){
+  shot.firstHit=first.id;
+  // Rail reflections are processed before the swept cue-contact solver in
+  // this tick. Recover their actual order: a rail AFTER first contact is
+  // legal even if both events fall inside one 120Hz integration step.
+  for(const railT of pendingPreContactRails){
+   if(railT>first.t+1e-7){shot.railAfterContact=true;break}
+  }
+ }
 }
 // A genuinely simultaneous contact group must be solved together. Applying
 // each impulse in sequence produces a visibly asymmetric split when a cue
@@ -630,7 +638,7 @@ function resolveSimultaneousContacts(batch,start=0,end=batch.length){
 // the normal cushion pass. Reapply the identical rail/pocket-mouth constraint
 // after object impulses, rather than letting it visibly escape for a frame.
 // The second pass only acts on newly out-of-bounds balls.
-function constrainRail(b){for(let axisIndex=0;axisIndex<2;axisIndex++){const axis=axisIndex===0?'x':'y';let pos=b[axis],lo=axis==='x'?L+rad:T+rad,hi=axis==='x'?R-rad:B-rad;if(pos<lo||pos>hi){const closest=axis==='x'?(pos<lo?L:R):(pos<lo?T:B);const cross=axis==='x'?b.y:b.x;const nearPocket=holes.some(([hx,hy])=>axis==='x'?Math.abs(hx-closest)<1&&Math.abs(hy-cross)<pocket*1.2:Math.abs(hy-closest)<12&&Math.abs(hx-cross)<pocket*1.2);if(nearPocket){
+function constrainRail(b,previous=null){for(let axisIndex=0;axisIndex<2;axisIndex++){const axis=axisIndex===0?'x':'y';let pos=b[axis],lo=axis==='x'?L+rad:T+rad,hi=axis==='x'?R-rad:B-rad;if(pos<lo||pos>hi){const closest=axis==='x'?(pos<lo?L:R):(pos<lo?T:B);const cross=axis==='x'?b.y:b.x;const nearPocket=holes.some(([hx,hy])=>axis==='x'?Math.abs(hx-closest)<1&&Math.abs(hy-cross)<pocket*1.2:Math.abs(hy-closest)<12&&Math.abs(hx-cross)<pocket*1.2);if(nearPocket){
   // A cushion gap is not a pocket: only the circular pocket-well test
   // above may remove a ball. Previously any ball crossing the outer rail
   // within a broad 1.2*pocket mouth band was potted, even when its centre
@@ -669,7 +677,18 @@ function constrainRail(b){for(let axisIndex=0;axisIndex<2;axisIndex++){const axi
       // by releasing rotational energy already carried by the ball.
       const nx=axis==='x'?(pos<lo?1:-1):0;
       const ny=axis==='y'?(pos<lo?1:-1):0;
-      reflectCushion(b,nx,ny,.78,.04);}}
+      const rebounded=reflectCushion(b,nx,ny,.78,.04);
+       // During the first movement pass, first cue contact has not yet
+       // been solved. Record only REAL cushion rebounds with a swept
+       // boundary-crossing time; the post-contact pass needs no deferral.
+       if(rebounded&&previous&&shot&&shot.firstHit===null){
+        const start=previous[axisIndex],boundary=pos<lo?lo:hi;
+        const distance=pos-start;
+        if(Math.abs(distance)>1e-9){
+         const fraction=(boundary-start)/distance;
+         if(fraction>=0&&fraction<=1)pendingPreContactRails.push(fraction);
+        }
+       }}}
 }
 // A cushion-clamped ball has no outward positional freedom. The ordinary
 // equal-share ball separation can push it through a rail; clamping that half
@@ -734,6 +753,8 @@ function projectRailContactOverlaps(){
 // Snapshot positions into reusable buffers instead of allocating an array of
 // [x,y] pairs on each 120Hz physics tick. Resize only for changed test/rack sizes.
 const beforePositions=[];
+// Real pre-contact rail rebounds, ordered within the current 120Hz tick.
+const pendingPreContactRails=[];
 // Reuse the swept-contact list across 120Hz ticks. Each physics tick previously
 // allocated a fresh list even with zero contacts; tight collision groups also
 // copied portions of it into temporary arrays before solving.
@@ -743,6 +764,7 @@ const contacts=[];
 // is indexed in detection order; contacts may still be sorted independently.
 const contactPool=[];
 function physics(dt){
+ pendingPreContactRails.length=0;
  if(beforePositions.length!==balls.length){
   beforePositions.length=balls.length;
   for(let i=0;i<balls.length;i++)beforePositions[i]=[0,0];
@@ -772,7 +794,7 @@ function physics(dt){
    Math.max(0,Math.min(1,((hx-fromX)*travelX+(hy-fromY)*travelY)/travel2)):1;
   const pdx=fromX+along*travelX-hx,pdy=fromY+along*travelY-hy;
   if(pdx*pdx+pdy*pdy<POCKET_CAPTURE_RADIUS2){pocketBall(b);break}
- }if(b.potted)continue;collideJaw(b);constrainRail(b);
+ }if(b.potted)continue;collideJaw(b);constrainRail(b,before[bi]);
  // Defer visible sphere rotation until after ball-ball impulses, the
  // post-contact jaw pass and final overlap projection. Rotating here would
  // account for free-flight/rail motion but NOT the collision correction:
