@@ -394,13 +394,17 @@ function render(){ctx.clearRect(0,0,W,H);ctx.drawImage(bg,0,0);if(!shooting&&!ga
  const alpha=blend?Math.max(0,Math.min(1,accumulator/STEP)):1;
  for(let i=0;i<balls.length;i++){
   const b=balls[i],p=blend?beforePositions[i]:null;
+  // A fast scratch can settle before its pocket ghost has faded. Suppress
+  // the respawned live cue until the sink finishes, preventing two white
+  // balls appearing simultaneously without changing any physical state.
+  if(ballInHand&&b.id===0&&pocketVisuals.some(g=>g.id===0))continue;
   if(!p||b.potted){drawBall(b);continue}
   const x=b.x,y=b.y;
   b.x=p[0]+(x-p[0])*alpha;b.y=p[1]+(y-p[1])*alpha;
   drawBall(b,blendedRoll(i,alpha));
   b.x=x;b.y=y;
  }
- if(ballInHand){ctx.save();ctx.strokeStyle='#ffdb79';ctx.lineWidth=3;ctx.setLineDash([6,6]);ctx.beginPath();ctx.arc(balls[0].x,balls[0].y,rad+7,0,pi*2);ctx.stroke();ctx.restore()}}
+ if(ballInHand&&!pocketVisuals.some(g=>g.id===0)){ctx.save();ctx.strokeStyle='#ffdb79';ctx.lineWidth=3;ctx.setLineDash([6,6]);ctx.beginPath();ctx.arc(balls[0].x,balls[0].y,rad+7,0,pi*2);ctx.stroke();ctx.restore()}}
 // Bank-aim preview: the first solid cushion reverses the incoming normal
 // velocity (0.78 restitution), without changing the actual shot/physics.
 // Never suggest a bank through a pocket mouth or rubber jaw. End the dashed
@@ -1087,6 +1091,11 @@ function finishCuePlacement(e){
 canvas.addEventListener('pointerdown',e=>{if(shooting||gameOver||aimPointer!==null||placementPointer!==null)return;
  if(ballInHand){
   e.preventDefault();
+  // Immediate placement takes ownership of the live cue. Retire only its
+  // scratch ghost so the ball becomes visible as soon as the finger moves.
+  for(let i=pocketVisuals.length-1;i>=0;i--)
+   if(pocketVisuals[i].id===0)pocketVisuals.splice(i,1);
+  renderDirty=true;
   placementPointer=e.pointerId;placementOrigin=[balls[0].x,balls[0].y];
   canvas.setPointerCapture(e.pointerId);
   moveCuePlacement(e);
@@ -1278,6 +1287,10 @@ function confirmCuePlacement(){
   if(!canPlace(x,y)){$('status').textContent='No legal cue-ball position available. Start a new rack.';return false}
   cue.x=x;cue.y=y;
  }
+ // Immediate PLACE CUE must also retire the sinking scratch ghost;
+ // otherwise the confirmed live cue appears before the old cue disappears.
+ for(let i=pocketVisuals.length-1;i>=0;i--)
+  if(pocketVisuals[i].id===0)pocketVisuals.splice(i,1);
  abandonCuePlacementGesture();ballInHand=false;updateHUD();$('status').textContent='Cue ball placed. Aim and press SHOOT.';return true;
 }
 function primaryAction(){if(ballInHand)return confirmCuePlacement();return shoot()}
