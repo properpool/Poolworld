@@ -394,6 +394,10 @@ function render(){ctx.clearRect(0,0,W,H);ctx.drawImage(bg,0,0);if(!shooting&&!ga
  const alpha=blend?Math.max(0,Math.min(1,accumulator/STEP)):1;
  for(let i=0;i<balls.length;i++){
   const b=balls[i],p=blend?beforePositions[i]:null;
+  // A fast scratch can settle before its pocket ghost has faded. Suppress
+  // the respawned live cue until the sink finishes, preventing two white
+  // balls appearing simultaneously without changing any physical state.
+  if(ballInHand&&b.id===0&&pocketVisuals.some(g=>g.id===0))continue;
   if(!p||b.potted){drawBall(b);continue}
   const x=b.x,y=b.y;
   b.x=p[0]+(x-p[0])*alpha;b.y=p[1]+(y-p[1])*alpha;
@@ -1087,6 +1091,11 @@ function finishCuePlacement(e){
 canvas.addEventListener('pointerdown',e=>{if(shooting||gameOver||aimPointer!==null||placementPointer!==null)return;
  if(ballInHand){
   e.preventDefault();
+  // Immediate placement takes ownership of the live cue. Retire only its
+  // scratch ghost so the ball becomes visible as soon as the finger moves.
+  for(let i=pocketVisuals.length-1;i>=0;i--)
+   if(pocketVisuals[i].id===0)pocketVisuals.splice(i,1);
+  renderDirty=true;
   placementPointer=e.pointerId;placementOrigin=[balls[0].x,balls[0].y];
   canvas.setPointerCapture(e.pointerId);
   moveCuePlacement(e);
