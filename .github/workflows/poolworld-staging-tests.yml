@@ -198,6 +198,8 @@ jobs:
         run: python tests/test_pool60_fivefps_motion.py
       - name: Sustained 3-4fps shot time, real cue travel and isolated hitch safety
         run: python tests/test_pool60_threefps_motion.py
+      - name: Completed-shot frame debt cannot fast-forward the next shot (132 checks)
+        run: python tests/test_pool60_shot_debt_reset.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
