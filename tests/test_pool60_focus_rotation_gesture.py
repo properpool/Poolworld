@@ -31,6 +31,7 @@ with sync_playwright() as pw:
         page.set_content(HTML,wait_until='load')
         for gesture in ('aim','power','placement'):
             page.set_viewport_size({'width':width,'height':height})
+            page.evaluate('if(focusActive){abandonActiveShotGestures();abandonCuePlacementGesture();setTableFocus(false)}')
             page.evaluate('freshRack()')
             page.locator('#focusMode').click()
             if gesture=='power':
@@ -82,6 +83,7 @@ with sync_playwright() as pw:
                 check(tag+' preserves selected 75% shot strength',
                     abs(after['power']-75)<.01,after)
         page.set_viewport_size({'width':width,'height':height})
+        page.evaluate('if(focusActive){abandonActiveShotGestures();abandonCuePlacementGesture();setTableFocus(false)}')
         page.evaluate('freshRack()')
         page.locator('#focusMode').click()
         page.set_viewport_size({'width':height,'height':width})
