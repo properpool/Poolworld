@@ -946,11 +946,11 @@ function frame(t){const previousFrame=last;const rawElapsed=previousFrame?Math.m
  const recentlyFired=shotFirstFramePending&&Number.isFinite(shotStartAt)&&
    previousFrame&&shotStartAt>=previousFrame&&shotStartAt<=t&&
    t-shotStartAt<=50;
- // A 260-340ms callback after normal 60Hz pacing is likely a single OS/GC
- // interruption, not genuine 3-4fps play. Freeze this one frame instead of
- // jumping eight ticks and carrying ~200ms of stale physics debt. If the
- // following callback is ALSO slow, repay the deferred interval using the
- // established bounded sustained-low-FPS budget; if smooth, discard it.
+ // An isolated 180-350ms callback after smooth pacing can be an OS/GC
+ // interruption, not sustained 3-5fps play. Freeze its first frame instead
+ // of jumping eight physics ticks and banking stale simulation time.
+ // If the next callback is ALSO slow, repay the deferred interval through
+ // the bounded sustained-low-FPS budget; if smooth, discard it.
  const isolatedShortHitch=shooting&&recentNormalFrame&&
    rawElapsed>=.18&&rawElapsed<=.35&&!recentlyFired;
  if(isolatedShortHitch)deferredSlowGap=rawElapsed;
