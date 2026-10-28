@@ -1407,6 +1407,10 @@ function retireBackgroundedInput(){
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='hidden')retireBackgroundedInput();
 });
+// Losing focus to browser chrome or the Android notification shade may
+// leave document.visibilityState visible and never dispatch pointercancel.
+// Treat window blur as an interrupted, uncommitted touchscreen transaction.
+window.addEventListener('blur',retireBackgroundedInput);
 window.addEventListener('pagehide',retireBackgroundedInput);
 
 rack();showPower(45);requestAnimationFrame(frame);
