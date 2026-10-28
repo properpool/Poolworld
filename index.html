@@ -152,7 +152,7 @@ function pocketBall(b){
  renderDirty=true;
  queueSound('pocket',.85);
 }
-function resolveShot(){if(!shot)return;const s=shot;shot=null;shooting=false;cueStrike=null;
+function resolveShot(){if(!shot)return;const s=shot;shot=null;shooting=false;cueStrike=null;shotFirstFramePending=false;
  // A completed shot owns its accumulated physics time. Do not carry slow-frame
  // debt into the next player's shot if SHOOT is pressed before another rAF.
  accumulator=0;slowFrameStreak=0;
@@ -229,7 +229,7 @@ function rollMarker(q,p,out){
 }
 const ROLL_STRIPE_AXIS=[0,1,0],ROLL_MARKER_OUT=[0,0,0];
 const ROLL_MEASLE_MARKS=[[0,0,1],[0,0,-1],[1,0,0],[-1,0,0],[0,1,0],[0,-1,0]];
-function rack(){pocketVisuals.length=0;abandonCuePlacementGesture();abandonActiveShotGestures();abandonFineAimHolds();balls=[makeBall(0,L+(R-L)*.24,(T+B)/2)];const bx=L+(R-L)*.71,cy=(T+B)/2,step=rad*2.035;let ids=[1,9,2,10,8,11,3,12,4,13,5,14,6,15,7],n=0;for(let row=0;row<5;row++)for(let j=0;j<=row;j++){const x=bx+row*step*.866,y=cy+(j-row/2)*step;balls.push(makeBall(ids[n++],x,y))}aim=0;shooting=false;shot=null;cueStrike=null;history=null;events.length=0;accumulator=0;slowFrameStreak=0;pendingAimReleaseShot=false;turn=1;groups={1:null,2:null};ballInHand=false;gameOver=false;winner=null;breakShot=true;$('status').textContent='Player 1 to break. Aim and pull the power handle, or press SHOOT.';updateHUD()}
+function rack(){pocketVisuals.length=0;abandonCuePlacementGesture();abandonActiveShotGestures();abandonFineAimHolds();balls=[makeBall(0,L+(R-L)*.24,(T+B)/2)];const bx=L+(R-L)*.71,cy=(T+B)/2,step=rad*2.035;let ids=[1,9,2,10,8,11,3,12,4,13,5,14,6,15,7],n=0;for(let row=0;row<5;row++)for(let j=0;j<=row;j++){const x=bx+row*step*.866,y=cy+(j-row/2)*step;balls.push(makeBall(ids[n++],x,y))}aim=0;shooting=false;shot=null;cueStrike=null;shotFirstFramePending=false;history=null;events.length=0;accumulator=0;slowFrameStreak=0;pendingAimReleaseShot=false;turn=1;groups={1:null,2:null};ballInHand=false;gameOver=false;winner=null;breakShot=true;$('status').textContent='Player 1 to break. Aim and pull the power handle, or press SHOOT.';updateHUD()}
 function updateHUD(){renderDirty=true;const left=balls.filter(b=>b.id!==0&&!b.potted).length;$('remaining').textContent=left+' balls left';$('player').textContent=`PLAYER ${turn} · ${groups[turn]?groups[turn].toUpperCase():'OPEN TABLE'}`;$('phase').textContent=gameOver?`PLAYER ${winner} WINS`:shooting?'BALLS MOVING':ballInHand?'BALL IN HAND':breakShot?'READY TO BREAK':'READY TO SHOOT';$('shoot').disabled=shooting||gameOver;$('shoot').textContent=ballInHand?'PLACE CUE':'SHOOT';$('shoot').setAttribute('aria-label',ballInHand?'Confirm cue-ball placement':'Shoot the cue ball');$('shoot').style.opacity=$('shoot').disabled?'.55':'1'}
 const bg=document.createElement('canvas');bg.width=W;bg.height=H;const g=bg.getContext('2d');
 function staticTable(){g.clearRect(0,0,W,H);let grad=g.createLinearGradient(0,0,0,H);grad.addColorStop(0,'#1d292b');grad.addColorStop(1,'#060b0e');g.fillStyle=grad;g.fillRect(0,0,W,H);g.fillStyle='#422716';roundRect(g,24,25,W-48,H-50,45);g.fill();g.fillStyle='#9b6033';roundRect(g,33,34,W-66,H-68,37);g.fill();g.fillStyle='#27180f';roundRect(g,47,48,W-94,H-96,28);g.fill();g.fillStyle='#153b38';roundRect(g,L-14,T-14,R-L+28,B-T+28,17);g.fill();const cloth=g.createLinearGradient(0,T,0,B);cloth.addColorStop(0,'#197b67');cloth.addColorStop(.5,'#146453');cloth.addColorStop(1,'#0b4b42');g.fillStyle=cloth;g.fillRect(L,T,R-L,B-T);g.strokeStyle='#e9f0d766';g.lineWidth=1;g.beginPath();g.moveTo(L+(R-L)*.24,T);g.lineTo(L+(R-L)*.24,B);g.stroke();for(let y=T+24;y<B;y+=37){for(let x=L+24;x<R;x+=37){g.fillStyle='#fff';g.globalAlpha=.018;g.fillRect(x,y,1,1)}}g.globalAlpha=1;for(let i=0;i<holes.length;i++){let [x,y]=holes[i];g.beginPath();g.fillStyle='#06080a';g.arc(x,y,pocket+3,0,pi*2);g.fill();g.beginPath();g.strokeStyle='#b38a50';g.lineWidth=5;g.arc(x,y,pocket+4,0,pi*2);g.stroke()}for(let i=1;i<=3;i++){let x=L+(R-L)*i/4;for(let y of [51,519]){g.fillStyle='#ead1a0';g.beginPath();g.arc(x,y,3.2,0,pi*2);g.fill()}}}
@@ -484,6 +484,8 @@ for(let b of balls){
 }ctx.lineTo(c.x+dx*hit,c.y+dy*hit);ctx.stroke();ctx.setLineDash([]);if(!object)drawBankPreview(c,dx,dy,hit);if(object){const hx=c.x+dx*hit,hy=c.y+dy*hit;ctx.strokeStyle='#ffffff80';ctx.beginPath();ctx.arc(hx,hy,rad,0,pi*2);ctx.stroke();const nx=(object.x-hx)/(2*rad),ny=(object.y-hy)/(2*rad);ctx.strokeStyle='#ffe1a6bb';ctx.setLineDash([4,5]);ctx.beginPath();ctx.moveTo(object.x,object.y);ctx.lineTo(object.x+nx*100,object.y+ny*100);ctx.stroke();ctx.setLineDash([])}}drawCue(c.x,c.y,aim,power,null)}
 // Physics: fixed 120Hz steps; translational and rotational impulses bounded.
 const STEP=1/120,POCKET_CAPTURE_RADIUS2=(pocket*.74)**2,CUE_STROKE_DURATION=.16;let accumulator=0,last=0,renderDirty=true,slowFrameStreak=0,cueStrike=null;
+// rAF time before SHOOT must not be charged to the newly fired ball.
+let shotStartAt=0,shotFirstFramePending=false;
 // Determine which object the cue reaches first within a physics tick.
 // Iteration order through the rack is not a valid substitute for contact time:
 // in a tight cluster the cue can overlap two balls during the same 120Hz tick.
@@ -922,7 +924,18 @@ function settled(){
 // two debt-recovery steps, capped at 22. A lone 100-200ms GC/browser hitch
 // retains the original eight-step safety limit. Idle owes no simulation time.
 // This preserves shot speed, NOT visual smoothness at a genuinely low FPS.
-function frame(t){const rawElapsed=last?Math.max(0,(t-last)/1000):0;let elapsed=Math.min(rawElapsed,rawElapsed>.35?.25:.35);last=t;
+function frame(t){const previousFrame=last;const rawElapsed=previousFrame?Math.max(0,(t-previousFrame)/1000):0;let elapsed=Math.min(rawElapsed,rawElapsed>.35?.25:.35);last=t;
+ // An input event can arrive late in a throttled rAF interval. Charging
+ // the entire gap to a shot fired only milliseconds ago makes the cue ball
+ // visibly jump on its first frame and carries false debt into the next.
+ // rAF timestamps and performance.now() share a time origin. The range
+ // guard also keeps deterministic synthetic frame fixtures independent.
+ if(shooting&&shotFirstFramePending){
+  shotFirstFramePending=false;
+  if(previousFrame&&Number.isFinite(shotStartAt)&&shotStartAt>=previousFrame&&shotStartAt<=t){
+   elapsed=Math.min(elapsed,Math.max(0,(t-shotStartAt)/1000));
+  }
+ }
  // Keep rendering briefly even if the shot resolves on the capture frame.
  // The final expired frame clears the ghost from the canvas.
  if(pocketVisuals.length){
@@ -958,6 +971,7 @@ function shotSpeed(level,isBreak=breakShot){
  return (.45+7.9*Math.pow(p,.92))*(isBreak?1.17:1);
 }
 function shoot(){if(shooting||gameOver||ballInHand||balls[0].potted)return false;
+ shotStartAt=performance.now();shotFirstFramePending=true;
  // An explicit SHOOT commits the selected aim/power and retires any held
  // touchscreen owners. Their late release must not rotate the next turn,
  // change the shot strength, or fire a second shot after the table settles.
