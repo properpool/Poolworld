@@ -84,7 +84,11 @@ function reflectCushion(b,nx,ny,restitution,friction){
   const tangentImpulse=Math.max(-maxTangent,Math.min(maxTangent,-slip/3.5));
   b.vx+=tangentImpulse*tx;b.vy+=tangentImpulse*ty;
   b.spin-=2.5*tangentImpulse;
-  if(-vn>.06){queueSound('rail',Math.min(1,-vn/5));if(shot&&shot.firstHit!==null)shot.railAfterContact=true;}
+  // Any actual post-contact cushion rebound satisfies the no-rail/no-pot
+   // rule. The 0.06 speed threshold is ONLY for audible rail playback:
+   // using it for foul adjudication falsely penalised gentle legal shots.
+   if(shot&&shot.firstHit!==null)shot.railAfterContact=true;
+   if(-vn>.06)queueSound('rail',Math.min(1,-vn/5));
   return true;
 }
 function collideJaw(b){
