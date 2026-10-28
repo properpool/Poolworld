@@ -28,19 +28,20 @@ with sync_playwright() as pw:
         page.set_content(HTML,wait_until='load')
         for side in ('top','bottom'):
             for level in (65,75):
-                for scenario in ('contact-before-pocket','pocket-before-contact','lateral-near-miss'):
+                for scenario in (case+'-order-'+order for case in ('contact-before-pocket','pocket-before-contact','lateral-near-miss') for order in ('a-first','b-first')):
                     result=page.evaluate("""([side,level,scenario])=>{
                       const top=side==='top',dir=top?1:-1;
+                      const base=scenario.split('-order-')[0];
                       const holeY=top?T-8:B+8;
                       const factor=shotSpeed(level,false)/shotSpeed(75,false);
                       const initialA=8*factor,initialB=14*factor;
-                      const gap=scenario==='pocket-before-contact'?20.4:22;
+                      const gap=base==='pocket-before-contact'?20.4:22;
                       const a=makeBall(1,W/2,holeY+dir*gap);
-                      const b=makeBall(9,W/2+(scenario==='lateral-near-miss'?28:0),
+                      const b=makeBall(9,W/2+(base==='lateral-near-miss'?28:0),
                         a.y+dir*(2*rad+.8));
                       const cue=makeBall(0,320,285);
                       a.vy=-dir*initialA;b.vy=-dir*initialB;
-                      balls=[cue,a,b];turn=1;groups={1:'solids',2:'stripes'};
+                      balls=scenario.endsWith('b-first')?[cue,b,a]:[cue,a,b];turn=1;groups={1:'solids',2:'stripes'};
                       breakShot=false;ballInHand=false;gameOver=false;winner=null;
                       shot={player:1,breakShot:false,firstHit:null,
                         railAfterContact:false,pocketed:[],scratch:false,
@@ -61,7 +62,7 @@ with sync_playwright() as pw:
                         state:balls.flatMap(x=>[x.x,x.y,x.vx,x.vy])};
                     }""",[side,level,scenario])
                     tag=f'{width}x{height} {side} power={level} {scenario}'
-                    early=scenario=='contact-before-pocket'
+                    early=scenario.startswith('contact-before-pocket')
                     check(tag+' pocket is captured once',
                           result['aPotted'] and not result['bPotted']
                           and result['pocketed']==[1],result)
