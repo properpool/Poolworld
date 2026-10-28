@@ -206,6 +206,8 @@ jobs:
         run: python tests/test_pool60_pocket_lip_stall.py
       - name: Fast pocket-mouth near misses rebound without rail snaps (four viewports)
         run: python tests/test_pool60_fast_lip_rebound.py
+      - name: First-shot frame excludes pre-input browser time and preserves impulse (132 checks)
+        run: python tests/test_pool60_first_shot_frame.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
