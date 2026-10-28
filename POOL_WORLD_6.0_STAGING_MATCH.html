@@ -627,6 +627,9 @@ function constrainRail(b){for(let axisIndex=0;axisIndex<2;axisIndex++){const axi
    // The friction model below is 120Hz: half-speed displacement per tick
    // with a half-scaled .012 + speed-dependent rolling deceleration.
    const speed=Math.hypot(b.vx,b.vy);
+   // Preserve full-speed entry into the mouth and existing cut-pot paths.
+   // Only intervene once a slow ball can no longer coast into a pocket.
+   if(speed>.08)continue;
    const decel=(.012+.0016*Math.min(speed,4))*.5;
    const coast=speed>1e-9?speed*speed/(4*decel):0;
    let canReachWell=false;
