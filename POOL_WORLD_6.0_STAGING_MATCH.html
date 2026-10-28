@@ -149,6 +149,9 @@ function pocketBall(b){
  queueSound('pocket',.85);
 }
 function resolveShot(){if(!shot)return;const s=shot;shot=null;shooting=false;cueStrike=null;
+ // A completed shot owns its accumulated physics time. Do not carry slow-frame
+ // debt into the next player's shot if SHOOT is pressed before another rAF.
+ accumulator=0;slowFrameStreak=0;
 // The whole table has settled. A frozen side-spin or follow value must not
 // survive the turn and alter a later collision on a stationary object ball.
 // Preserve rollQ (the visible resting orientation), but clear kinetic spin.
@@ -926,7 +929,9 @@ function shoot(){if(shooting||gameOver||ballInHand||balls[0].potted)return false
  // An explicit SHOOT commits the selected aim/power and retires any held
  // touchscreen owners. Their late release must not rotate the next turn,
  // change the shot strength, or fire a second shot after the table settles.
- abandonActiveShotGestures();abandonFineAimHolds();slowFrameStreak=0;history=snapshot();shot={player:turn,breakShot,firstHit:null,railAfterContact:false,pocketed:[],scratch:false,targetEight:groups[turn]!==null&&remainingFor(turn)===0};const b=balls[0],speed=shotSpeed(power,breakShot);b.vx=Math.cos(aim)*speed;b.vy=Math.sin(aim)*speed;b.spin=spin/100*1.2;b.follow=follow/100*2.5;shooting=true;
+ abandonActiveShotGestures();abandonFineAimHolds();
+ // Each committed shot starts from its own zero-debt simulation clock.
+ accumulator=0;slowFrameStreak=0;history=snapshot();shot={player:turn,breakShot,firstHit:null,railAfterContact:false,pocketed:[],scratch:false,targetEight:groups[turn]!==null&&remainingFor(turn)===0};const b=balls[0],speed=shotSpeed(power,breakShot);b.vx=Math.cos(aim)*speed;b.vy=Math.sin(aim)*speed;b.spin=spin/100*1.2;b.follow=follow/100*2.5;shooting=true;
  cueStrike={x:b.x,y:b.y,aim,power,elapsed:0};
  // The first rendered shot frame can precede its first physics tick.
  // Seed previous positions now, so it cannot interpolate from an old rack.
