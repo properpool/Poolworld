@@ -36,6 +36,7 @@ with sync_playwright() as pw:
                     railAfterContact:false,pocketed:[],scratch:false,
                     targetEight:false};
                 shooting=true;
+                if(scenario==='object-pot'){shot.firstHit=1;shot.railAfterContact=true}
                 const target=scenario==='object-pot'?balls[1]:balls[0];
                 pocketBall(target);
                 resolveShot();
