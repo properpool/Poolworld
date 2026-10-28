@@ -68,7 +68,8 @@ with sync_playwright() as pw:
                           abs(result['calibration']-result['startSpeed'])<1e-10
                           and all(math.isfinite(x) for x in result['positions']),result)
                     check(tag+' normal turn and no premature match win',
-                          result['turn']==2 and not result['gameOver'],result)
+                          result['turn']==(1 if before and result['objectPotted'] else 2)
+                          and not result['gameOver'],result)
         check(f'{width}x{height} no JavaScript errors',not errors,errors)
         page.close()
     browser.close()
