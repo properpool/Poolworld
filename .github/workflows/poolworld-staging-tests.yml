@@ -232,6 +232,8 @@ jobs:
         run: python tests/test_pool60_short_hitch.py
       - name: Isolated 180-240ms mobile animation gaps preserve shot continuity and sustained 5fps
         run: python tests/test_pool60_short_gap.py
+      - name: Equal-time swept multi-ball collision symmetry and energy (260 checks)
+        run: python tests/test_pool60_simultaneous_swept.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
