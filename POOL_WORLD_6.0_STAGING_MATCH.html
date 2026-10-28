@@ -815,12 +815,13 @@ function physics(dt){
    Math.max(0,Math.min(1,((hx-fromX)*travelX+(hy-fromY)*travelY)/travel2)):1;
   const pdx=fromX+along*travelX-hx,pdy=fromY+along*travelY-hy;
   if(pdx*pdx+pdy*pdy<POCKET_CAPTURE_RADIUS2){
-   // The pocket sweep precedes ball-ball collision resolution. An object
-   // may collide with ANY ball before reaching the pocket well in this
-   // 120Hz tick, not only the cue. Pocketing it early erases that impulse.
-   // Compare analytic swept contact time with pocket entry time.
+   // The pocket sweep precedes ball-ball collision resolution. ANY ball,
+   // including the cue ball, may hit another ball before reaching a pocket
+   // in this 120Hz tick. Premature cue scratch otherwise erases a legal
+   // first contact and its real momentum transfer. Compare analytic swept
+   // contact time with pocket entry time for both cue and object balls.
    let deferForEarlierImpact=false;
-   if(bi>0&&travel2>1e-12){
+   if(travel2>1e-12){
     const psx=fromX-hx,psy=fromY-hy;
     const pb=2*(psx*travelX+psy*travelY);
     const pc=psx*psx+psy*psy-POCKET_CAPTURE_RADIUS2;
