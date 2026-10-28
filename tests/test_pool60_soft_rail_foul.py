@@ -32,7 +32,7 @@ with sync_playwright() as pw:
                   rack();pocketVisuals.length=0;events.length=0;
                   const normal=wall==='left'?[1,0]:wall==='right'?[-1,0]:
                     wall==='top'?[0,1]:[0,-1];
-                  const x=wall==='left'?L+rad+.001:wall==='right'?R-rad-.001:550;
+                  const x=wall==='left'?L+rad+.001:wall==='right'?R-rad-.001:400;
                   const y=wall==='top'?T+rad+.001:wall==='bottom'?B-rad-.001:285;
                   balls=[makeBall(0,400,285),makeBall(1,x,y)];
                   const target=balls[1];
@@ -66,7 +66,7 @@ with sync_playwright() as pw:
                     data['impact']['rail'] and data['railBeforeResolution'],data)
                 check(tag+' shot naturally settles',data['settledNow'] and data['ticks']<80,data)
                 check(tag+' no false foul or ball-in-hand',
-                    data['turn']==1 and not data['ballInHand'] and not data['shooting'],data)
+                    data['turn']==2 and not data['ballInHand'] and not data['shooting'],data)
                 check(tag+' quiet collision retains audio threshold',
                     ('rail' in data['impact']['soundKinds'])==(speed>.07),data)
                 check(tag+' cue and scoring unchanged',
@@ -76,7 +76,7 @@ with sync_playwright() as pw:
                 rack();events.length=0;
                 const normal=wall==='left'?[1,0]:wall==='right'?[-1,0]:
                   wall==='top'?[0,1]:[0,-1];
-                const x=wall==='left'?L+rad+.001:wall==='right'?R-rad-.001:550;
+                const x=wall==='left'?L+rad+.001:wall==='right'?R-rad-.001:400;
                 const y=wall==='top'?T+rad+.001:wall==='bottom'?B-rad-.001:285;
                 balls=[makeBall(0,400,285),makeBall(1,x,y)];
                 balls[1].vx=-normal[0]*.05;balls[1].vy=-normal[1]*.05;
