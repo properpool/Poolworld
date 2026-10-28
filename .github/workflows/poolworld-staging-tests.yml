@@ -234,7 +234,7 @@ jobs:
         run: python tests/test_pool60_short_gap.py
       - name: Equal-time swept multi-ball collision symmetry and energy (260 checks)
         run: python tests/test_pool60_simultaneous_swept.py
-      - name: Same-tick cue first-contact and cushion chronology (196 checks)
+      - name: Same-tick cue first-contact and cushion chronology (292 checks)
         run: python tests/test_pool60_rail_contact_chronology.py
       - name: Store test results
         if: always()
