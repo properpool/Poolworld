@@ -89,7 +89,9 @@ with sync_playwright() as pw:
                         i['power']==strength and
                         abs(i['impulse']-result['calibration'])<1e-9
                         and r['velocity']>0 and
-                        r['drawnCue'] is not None if False else True,result)
+                        r['drawnCue'] is not None and
+                        math.isfinite(r['drawnCue']) and
+                        math.isfinite(r['velocity']),result)
         check(f'{width}x{height} no browser exceptions',not errors,errors)
         page.close()
     browser.close()
