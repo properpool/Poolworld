@@ -1381,5 +1381,33 @@ function finishDeferredFocusRotation(){
 for(const type of ['pointerup','pointercancel','lostpointercapture'])
  window.addEventListener(type,finishDeferredFocusRotation);
 
+// A mobile tab can become hidden while a finger is still captured, without
+// delivering pointercancel before the page is frozen. Retire the complete
+// unfinished input transaction so a delayed pointerup cannot fire a queued
+// two-finger shot, change selected power, rotate the cue or confirm ball-in-hand.
+// This does not pause or alter any already-committed moving shot.
+function retireBackgroundedInput(){
+  const hadAim=aimPointer!==null,hadPower=powerDrag||pendingAimReleaseShot;
+  const hadPlacement=placementPointer!==null;
+  const previousAim=aimStartAngle,previousPower=powerStart;
+  const previousPlacement=placementOrigin?[...placementOrigin]:null;
+  abandonActiveShotGestures();
+  abandonCuePlacementGesture();
+  abandonFineAimHolds();
+  if(hadAim){aim=previousAim;lastAim=aim}
+  if(hadPower)showPower(previousPower);
+  if(hadPlacement&&previousPlacement){
+    balls[0].x=previousPlacement[0];balls[0].y=previousPlacement[1];
+  }
+  if(hadAim||hadPower||hadPlacement){
+    renderDirty=true;
+    if(!shooting)$('status').textContent='Interrupted touch cancelled. Aim or pull again.';
+  }
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden')retireBackgroundedInput();
+});
+window.addEventListener('pagehide',retireBackgroundedInput);
+
 rack();showPower(45);requestAnimationFrame(frame);
 </script></body></html>
