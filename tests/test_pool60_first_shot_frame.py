@@ -38,7 +38,10 @@ with sync_playwright() as pw:
                         breakShot=false;aim=0;spin=0;follow=0;
                         gameOver=false;ballInHand=false;showPower(power);
                         physics=(dt)=>{ticks++;oldPhysics(dt)};
-                        const fired=shoot(),impulse=Math.hypot(balls[0].vx,balls[0].vy);
+                        const beforeShoot=performance.now(),fired=shoot(),afterShoot=performance.now();
+                        const capturedStartAt=typeof shotStartAt==='number'?shotStartAt:null;
+                        const pendingAtStart=typeof shotFirstFramePending==='boolean'?shotFirstFramePending:false;
+                        const impulse=Math.hypot(balls[0].vx,balls[0].vy);
                         const startX=balls[0].x;
                         // Last rAF at 1000ms, but the user's SHOOT event
                         // happened only 28ms before the next callback.
@@ -57,6 +60,7 @@ with sync_playwright() as pw:
                         const beforeNext=ticks;
                         frame(1000+gap+1000/60);
                         return {fired,impulse,expected:shotSpeed(power,false),
+                            beforeShoot,afterShoot,capturedStartAt,pendingAtStart,
                             firstTicks,firstTravel:firstX-startX,
                             expectedTravel:referenceX-startX,
                             firstError:Math.abs(firstX-referenceX),
@@ -69,7 +73,9 @@ with sync_playwright() as pw:
                 }""",{'gap':gap,'power':power})
                 tag=f'{width}x{height} {gap}ms {power}%'
                 check(tag+' retains calibrated shot impulse',
-                    data['fired'] and abs(data['impulse']-data['expected'])<1e-7,data)
+                    data['fired'] and abs(data['impulse']-data['expected'])<1e-7 and
+                    data['pendingAtStart'] and data['capturedStartAt'] is not None and
+                    data['beforeShoot']-0.5<=data['capturedStartAt']<=data['afterShoot']+0.5,data)
                 check(tag+' first frame advances only three post-input ticks',
                     data['firstTicks']==3,data)
                 check(tag+' first-ball displacement matches 28ms shot time',
