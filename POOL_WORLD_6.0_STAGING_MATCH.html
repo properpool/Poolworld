@@ -952,7 +952,7 @@ function frame(t){const previousFrame=last;const rawElapsed=previousFrame?Math.m
  // following callback is ALSO slow, repay the deferred interval using the
  // established bounded sustained-low-FPS budget; if smooth, discard it.
  const isolatedShortHitch=shooting&&recentNormalFrame&&
-   rawElapsed>=.25&&rawElapsed<=.35&&!recentlyFired;
+   rawElapsed>=.18&&rawElapsed<=.35&&!recentlyFired;
  if(isolatedShortHitch)deferredSlowGap=rawElapsed;
  else if(deferredSlowGap){
   if(shooting&&rawElapsed>=.064&&rawElapsed<=.35&&!recentlyFired){
