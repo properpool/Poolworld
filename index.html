@@ -932,6 +932,24 @@ function settled(){
 // retains the original eight-step safety limit. Idle owes no simulation time.
 // This preserves shot speed, NOT visual smoothness at a genuinely low FPS.
 function frame(t){const previousFrame=last;const rawElapsed=previousFrame?Math.max(0,(t-previousFrame)/1000):0;let elapsed=Math.min(rawElapsed,rawElapsed>.35?.25:.35);last=t;
+ // A phone can suspend this tab for seconds while a shot is moving.
+ // The old 250ms clipped gap still ran eight physics ticks immediately and
+ // banked ~183ms of debt, then fast-forwarded several more 60Hz frames.
+ // This is not sustained low FPS: freeze simulation time while suspended,
+ // resume at normal cadence, and align interpolation to the last real pose.
+ // A NEW shot fired within 50ms of the returning callback retains only its
+ // genuine post-input time through the first-frame logic below.
+ const recentlyFired=shotFirstFramePending&&Number.isFinite(shotStartAt)&&
+   previousFrame&&shotStartAt>=previousFrame&&shotStartAt<=t&&
+   t-shotStartAt<=50;
+ if(shooting&&rawElapsed>1&&!recentlyFired){
+  elapsed=0;accumulator=0;slowFrameStreak=0;
+  for(let i=0;i<balls.length;i++){
+   const b=balls[i],p=beforePositions[i],q=beforeRollQ[i],roll=b.rollQ;
+   if(p){p[0]=b.x;p[1]=b.y}
+   if(q&&roll){q[0]=roll[0];q[1]=roll[1];q[2]=roll[2];q[3]=roll[3]}
+  }
+ }
  // An input event can arrive late in a throttled rAF interval. Charging
  // the entire gap to a shot fired only milliseconds ago makes the cue ball
  // visibly jump on its first frame and carries false debt into the next.
