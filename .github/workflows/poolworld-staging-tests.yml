@@ -222,6 +222,8 @@ jobs:
         run: python tests/test_pool60_resume_pause_motion.py
       - name: Subsecond mobile interruption must not fast-forward moving shots (252 checks)
         run: python tests/test_pool60_subsecond_resume.py
+      - name: Backgrounded mobile aim, power and cue placement cannot commit stale touches
+        run: python tests/test_pool60_background_touch_retirement.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
