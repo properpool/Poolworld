@@ -92,6 +92,8 @@ jobs:
         run: python tests/test_pool60_settled_spin.py
       - name: Round pool balls and accurate touch geometry on five viewports (35 checks)
         run: python tests/test_pool60_canvas_aspect.py
+      - name: Phone rotation during active BIG TABLE aim, power and cue placement
+        run: python tests/test_pool60_focus_rotation_gesture.py
       - name: Interrupted aim and power pointer-capture recovery (50 checks)
         run: python tests/test_pool60_pointer_capture.py
       - name: Pocket-jaw clearance after object impacts (484 checks)
