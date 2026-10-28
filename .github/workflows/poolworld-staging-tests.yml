@@ -138,6 +138,8 @@ jobs:
         run: python tests/test_pool60_pocket_sqrt.py
       - name: Settled-shot square-root elimination and real moving-rack rAF (60 checks)
         run: python tests/test_pool60_settled_sqrt.py
+      - name: Inward pocket-jaw swept rebounds across central broad-phase boundary
+        run: python tests/test_pool60_inward_jaw_sweep.py
       - name: High-speed swept grazing contacts transfer real impulses (80 checks)
         run: python tests/test_pool60_swept_grazing.py
       - name: Touching cue first-hit physics and phantom foul prevention
