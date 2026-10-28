@@ -887,7 +887,7 @@ function settled(){
 // two debt-recovery steps, capped at 22. A lone 100-200ms GC/browser hitch
 // retains the original eight-step safety limit. Idle owes no simulation time.
 // This preserves shot speed, NOT visual smoothness at a genuinely low FPS.
-function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.35)):0;last=t;
+function frame(t){const rawElapsed=last?Math.max(0,(t-last)/1000):0;let elapsed=Math.min(rawElapsed,rawElapsed>.35?.25:.35);last=t;
  // Keep rendering briefly even if the shot resolves on the capture frame.
  // The final expired frame clears the ghost from the canvas.
  if(pocketVisuals.length){
@@ -906,7 +906,7 @@ function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.35)):0;las
  // the original eight-step budget until the second consecutive slow frame.
  // Include sustained 180-350ms frames: 3-4fps callbacks previously clipped
  // elapsed time or exhausted their physics budget, slowing shots further.
- slowFrameStreak=elapsed>=.064&&elapsed<=.35?Math.min(3,slowFrameStreak+1):0;
+ slowFrameStreak=rawElapsed<=.35&&elapsed>=.064?Math.min(3,slowFrameStreak+1):0;
  // At 3fps, eight safe ticks on the first callback leave 32 ticks of debt.
  // Preserve up to 750ms only after two consecutive slow callbacks, then
  // recover at most four extra ticks per frame. A lone browser stall still

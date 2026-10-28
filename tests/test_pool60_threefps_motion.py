@@ -64,6 +64,22 @@ with sync_playwright() as pw:
             }""",ms)
             check(f'{tag} isolated {ms}ms hitch keeps 8-tick CPU guard',
                 data['first']<=8 and data['second']<=8,data)
+        interrupted=page.evaluate("""()=>{
+            const op=physics,orr=render,os=settled;
+            let ticks=0;physics=()=>{ticks++};render=()=>{};settled=()=>false;
+            try{
+                rack();shooting=true;last=1000;accumulator=0;slowFrameStreak=0;
+                for(let i=1;i<=4;i++)frame(1000+i*1000/3);
+                const before=ticks;
+                frame(1000+4*1000/3+500);
+                return {burst:ticks-before,streak:slowFrameStreak,debt:accumulator};
+            }finally{
+                physics=op;render=orr;settled=os;shooting=false;
+                accumulator=0;slowFrameStreak=0;
+            }
+        }""")
+        check(f'{tag} isolated 500ms interruption after 3fps resets 8-tick guard',
+            interrupted['burst']<=8 and interrupted['streak']==0,interrupted)
         motion=page.evaluate("""()=>{
             const oldRender=render,oldSound=sound;
             render=()=>{};sound=()=>{};
