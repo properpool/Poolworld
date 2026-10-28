@@ -815,37 +815,64 @@ function physics(dt){
    Math.max(0,Math.min(1,((hx-fromX)*travelX+(hy-fromY)*travelY)/travel2)):1;
   const pdx=fromX+along*travelX-hx,pdy=fromY+along*travelY-hy;
   if(pdx*pdx+pdy*pdy<POCKET_CAPTURE_RADIUS2){
-   // A moving object can enter a pocket AFTER an earlier cue/object impact
-   // inside this SAME 120Hz step. Pocketing it before the contact solver
-   // erases the real impulse and first-hit, incorrectly awarding a foul.
-   // Defer only when the analytically swept cue contact precedes the first
-   // pocket-well entry. Other pockets keep immediate capture and scoring.
-   let deferForCueImpact=false;
-   if(bi>0&&shot&&!balls[0].potted&&travel2>1e-12){
-    const startDX=fromX-hx,startDY=fromY-hy;
-    const startDistance2=startDX*startDX+startDY*startDY;
-    if(startDistance2>=POCKET_CAPTURE_RADIUS2){
-     const pocketB=2*(startDX*travelX+startDY*travelY);
-     const pocketC=startDistance2-POCKET_CAPTURE_RADIUS2;
-     const pocketDisc=pocketB*pocketB-4*travel2*pocketC;
-     if(pocketDisc>=0){
-      const pocketT=(-pocketB-Math.sqrt(pocketDisc))/(2*travel2);
-      const cue=balls[0],sx=fromX-before[0][0],sy=fromY-before[0][1];
-      const relDX=travelX-(cue.x-before[0][0]);
-      const relDY=travelY-(cue.y-before[0][1]);
-      const relA=relDX*relDX+relDY*relDY;
-      const relB=2*(sx*relDX+sy*relDY);
-      const relC=sx*sx+sy*sy-(2*rad)**2;
-      const relDisc=relB*relB-4*relA*relC;
-      if(pocketT>0&&pocketT<=1&&relC>0&&relA>1e-12&&
-         relB<0&&relDisc>=0){
-       const cueT=(-relB-Math.sqrt(relDisc))/(2*relA);
-       deferForCueImpact=cueT>=0&&cueT<pocketT-1e-7;
+   // The pocket sweep precedes ball-ball collision resolution. An object
+   // may collide with ANY ball before reaching the pocket well in this
+   // 120Hz tick, not only the cue. Pocketing it early erases that impulse.
+   // Compare analytic swept contact time with pocket entry time.
+   let deferForEarlierImpact=false;
+   if(bi>0&&travel2>1e-12){
+    const psx=fromX-hx,psy=fromY-hy;
+    const pb=2*(psx*travelX+psy*travelY);
+    const pc=psx*psx+psy*psy-POCKET_CAPTURE_RADIUS2;
+    const pd=pb*pb-4*travel2*pc;
+    if(pc>=0&&pb<0&&pd>=0){
+     const pocketT=(-pb-Math.sqrt(pd))/(2*travel2);
+     if(pocketT>=0&&pocketT<=1){
+      for(let oi=0;oi<balls.length;oi++){
+       if(oi===bi)continue;
+       const other=balls[oi];
+       if(other.potted)continue;
+       const ox0=before[oi][0],oy0=before[oi][1];
+       let odx=other.x-ox0,ody=other.y-oy0;
+       if(oi>bi){
+        // This ball has not been integrated yet. Predict the identical
+        // friction-adjusted movement without modifying its velocity.
+        const speed=Math.hypot(other.vx,other.vy);
+        const decel=(.012+.0016*Math.min(speed,4))*scale;
+        const factor=speed>=.021?Math.max(0,(speed-decel)/speed):0;
+        odx=other.vx*factor*scale;ody=other.vy*factor*scale;
+       }
+       const sx=fromX-ox0,sy=fromY-oy0;
+       const dx=travelX-odx,dy=travelY-ody;
+       const aa=dx*dx+dy*dy,bb=2*(sx*dx+sy*dy);
+       const cc=sx*sx+sy*sy-(2*rad)**2;
+       if(cc<=0||aa<=1e-12||bb>=0)continue;
+       const disc=bb*bb-4*aa*cc;
+       if(disc<0)continue;
+       const hitT=(-bb-Math.sqrt(disc))/(2*aa);
+       if(hitT<0||hitT>=pocketT-1e-7)continue;
+       // A later-processed striker may itself enter a pocket first.
+       let strikerPocketedEarlier=false;
+       if(oi>bi){
+        const otherTravel2=odx*odx+ody*ody;
+        for(const [phx,phy] of holes){
+         const hx0=ox0-phx,hy0=oy0-phy;
+         const c=hx0*hx0+hy0*hy0-POCKET_CAPTURE_RADIUS2;
+         if(c<0){strikerPocketedEarlier=true;break}
+         const b=2*(hx0*odx+hy0*ody);
+         const disc2=b*b-4*otherTravel2*c;
+         if(otherTravel2>1e-12&&b<0&&disc2>=0){
+          const t=(-b-Math.sqrt(disc2))/(2*otherTravel2);
+          if(t>=0&&t<hitT-1e-7){strikerPocketedEarlier=true;break}
+         }
+        }
+       }
+       if(!strikerPocketedEarlier){deferForEarlierImpact=true;break}
       }
      }
     }
    }
-   if(!deferForCueImpact)pocketBall(b);
+   if(!deferForEarlierImpact)pocketBall(b);
    break;
   }
  }if(b.potted)continue;collideJaw(b,before[bi]);constrainRail(b,before[bi]);
