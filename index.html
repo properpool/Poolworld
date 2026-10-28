@@ -97,8 +97,16 @@ function collideJaw(b,previous=null,stepScale=.5){
   // per-ball nose checks on each 120Hz physics tick during central play;
   // preserve the exact original narrow-phase for rail-side and jaw contacts.
   const jawReach=rad+jawRadius;
-  if(b.x>=L+jawReach&&b.x<=R-jawReach&&
-     b.y>=T+jawReach&&b.y<=B-jawReach)return;
+  // The endpoint can land inside the central rectangle AFTER crossing
+  // a rubber jaw earlier in this 120Hz tick. A broad-phase reject is safe
+  // only when BOTH the current and previous centres are deep inside.
+  // The post-contact endpoint-only pass still uses the old early exit.
+  const endpointClear=b.x>=L+jawReach&&b.x<=R-jawReach&&
+     b.y>=T+jawReach&&b.y<=B-jawReach;
+  const startClear=previous&&previous[0]>=L+jawReach&&
+     previous[0]<=R-jawReach&&previous[1]>=T+jawReach&&
+     previous[1]<=B-jawReach;
+  if(endpointClear&&(!previous||startClear))return;
   for(const [jx,jy] of jaws){
     let dx=b.x-jx,dy=b.y-jy,dist2=dx*dx+dy*dy;
     const min=rad+jawRadius;
