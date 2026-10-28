@@ -620,16 +620,12 @@ function constrainRail(b){for(let axisIndex=0;axisIndex<2;axisIndex++){const axi
   // within a broad 1.2*pocket mouth band was potted, even when its centre
   // missed the actual pocket. Rebound an overrun outside the capture well.
   if(pos>=lo-rad&&pos<=hi+rad){
-   // A slow near-miss can cross the open pocket mouth, exhaust its rolling
-   // speed BEFORE reaching the circular well, and freeze beyond the cloth.
-   // Keep the gap open for genuine pots: project the remaining coast along
-   // the actual velocity and allow entry only when that path reaches a well.
-   // The friction model below is 120Hz: half-speed displacement per tick
-   // with a half-scaled .012 + speed-dependent rolling deceleration.
+   // A fast near miss can cross an open pocket mouth without intersecting
+   // the circular well, then snap backwards by a ball radius when it leaves
+   // the mouth band. Check its actual remaining trajectory at ANY speed:
+   // only a ball whose friction-limited path enters a real well may pass.
+   // This preserves genuine high-speed cut pots without a phantom capture.
    const speed=Math.hypot(b.vx,b.vy);
-   // Preserve full-speed entry into the mouth and existing cut-pot paths.
-   // Only intervene once a slow ball can no longer coast into a pocket.
-   if(speed>.08)continue;
    const decel=(.012+.0016*Math.min(speed,4))*.5;
    const coast=speed>1e-9?speed*speed/(4*decel):0;
    let canReachWell=false;
