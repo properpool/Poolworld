@@ -1297,7 +1297,7 @@ const focusAnchors=focusNodes.map(node=>{
 function setTableFocus(active){
  if(active===focusActive)return;
  // An in-progress captured gesture must not be remapped mid-touch.
- if(dragAim||powerDrag)return;
+ if(dragAim||powerDrag||placementPointer!==null)return;
  if(active&&!(matchMedia('(orientation: portrait) and (max-width: 600px)').matches))return;
  focusActive=active;
  const overlay=$('focusOverlay'),mount=$('focusMount');
@@ -1318,6 +1318,17 @@ $('exitFocus').onclick=()=>setTableFocus(false);
 // Device rotation restores native landscape controls rather than leaving
 // a sideways overlay on an already-landscape screen.
 window.addEventListener('resize',()=>{if(focusActive&&!matchMedia('(orientation: portrait) and (max-width: 600px)').matches)setTableFocus(false)});
+// A phone can rotate while an aim, power or ball-in-hand pointer is captured.
+// Keep the same coordinate transform until that gesture has finished; then
+// restore the native landscape layout on release, cancellation or capture loss.
+// Without this, placement could remap mid-drag and the expanded overlay could
+// remain stranded sideways after a held aim/power gesture ended.
+function finishDeferredFocusRotation(){
+ if(focusActive&&!matchMedia('(orientation: portrait) and (max-width: 600px)').matches&&
+    !dragAim&&!powerDrag&&placementPointer===null)setTableFocus(false);
+}
+for(const type of ['pointerup','pointercancel','lostpointercapture'])
+ window.addEventListener(type,finishDeferredFocusRotation);
 
 rack();showPower(45);requestAnimationFrame(frame);
 </script></body></html>
