@@ -244,6 +244,8 @@ jobs:
         run: python tests/test_pool60_object_pocket_contact_order.py
       - name: Cue/object impact before cue scratch must transfer momentum (four viewports)
         run: python tests/test_pool60_cue_scratch_chronology.py
+      - name: Swept-only high-speed pocket jaw grazes must rebound, near misses must not
+        run: python tests/test_pool60_swept_jaw_graze.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
