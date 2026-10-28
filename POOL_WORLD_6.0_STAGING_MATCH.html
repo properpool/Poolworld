@@ -887,7 +887,7 @@ function settled(){
 // two debt-recovery steps, capped at 22. A lone 100-200ms GC/browser hitch
 // retains the original eight-step safety limit. Idle owes no simulation time.
 // This preserves shot speed, NOT visual smoothness at a genuinely low FPS.
-function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.25)):0;last=t;
+function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.35)):0;last=t;
  // Keep rendering briefly even if the shot resolves on the capture frame.
  // The final expired frame clears the ghost from the canvas.
  if(pocketVisuals.length){
@@ -904,16 +904,16 @@ function frame(t){let elapsed=last?Math.max(0,Math.min((t-last)/1000,.25)):0;las
  // threshold never enabled catch-up and cue shots ran in slow motion.
  // 64ms catches the gap below 15fps while one-off hitches still use
  // the original eight-step budget until the second consecutive slow frame.
- // Include sustained 180-240ms frames: these previously reset the detector,
- // making 5fps shot motion run at one-third of its intended speed.
- slowFrameStreak=elapsed>=.064&&elapsed<=.25?Math.min(3,slowFrameStreak+1):0;
- // At 5fps, eight safe ticks on the first callback leave 16 ticks of debt.
- // Allow 500ms of accumulated debt ONLY after two consecutive slow callbacks;
- // otherwise the old 300ms ceiling discards shot travel before recovery.
- // Isolated 180-240ms browser stalls still get at most eight ticks.
- accumulator=Math.min(slowFrameStreak>=2?.50:.25,accumulator+elapsed);
+ // Include sustained 180-350ms frames: 3-4fps callbacks previously clipped
+ // elapsed time or exhausted their physics budget, slowing shots further.
+ slowFrameStreak=elapsed>=.064&&elapsed<=.35?Math.min(3,slowFrameStreak+1):0;
+ // At 3fps, eight safe ticks on the first callback leave 32 ticks of debt.
+ // Preserve up to 750ms only after two consecutive slow callbacks, then
+ // recover at most four extra ticks per frame. A lone browser stall still
+ // runs at most eight ticks; 5-15fps budgets remain as previously tested.
+ accumulator=Math.min(slowFrameStreak>=2?.75:.35,accumulator+elapsed);
  }else{accumulator=0;slowFrameStreak=0}
- const tickBudget=slowFrameStreak>=2?Math.min(elapsed>.175?28:22,Math.ceil(elapsed/STEP)+2):8;
+ const tickBudget=slowFrameStreak>=2?Math.min(elapsed>=.245?44:elapsed>.175?28:22,Math.ceil(elapsed/STEP)+(elapsed>=.245?4:2)):8;
  let n=0;while(shooting&&accumulator>=STEP&&n<tickBudget){physics(STEP);accumulator-=STEP;n++}if(shooting){for(let i=0;i<Math.min(events.length,8);i++){const [kind,v]=events[i];sound(kind,v)}events.length=0;if(settled())resolveShot()}if(shooting||renderDirty){interpolateVisual=shooting;render();interpolateVisual=false;renderDirty=false}requestAnimationFrame(frame)}
 // Calibrated to table dimensions: mid-power shots must cross the table,
 // while short finesse shots remain possible. This is a gameplay tuning curve,
