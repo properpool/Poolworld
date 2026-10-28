@@ -216,6 +216,8 @@ jobs:
         run: python tests/test_pool60_scratch_ghost_transition.py
       - name: Sideways power-panel slips cannot change shot strength (phone and focus)
         run: python tests/test_pool60_power_cross_axis_slip.py
+      - name: Sideways-dominant diagonal swipes cannot change selected shot power
+        run: python tests/test_pool60_power_diagonal_slip.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
