@@ -91,7 +91,7 @@ function reflectCushion(b,nx,ny,restitution,friction){
    if(-vn>.06)queueSound('rail',Math.min(1,-vn/5));
   return true;
 }
-function collideJaw(b,previous=null){
+function collideJaw(b,previous=null,stepScale=.5){
   // Every rubber nose lies on a cushion edge. A ball wholly inside this
   // inner rectangle cannot intersect any expanded jaw circle. Avoid twelve
   // per-ball nose checks on each 120Hz physics tick during central play;
@@ -102,7 +102,39 @@ function collideJaw(b,previous=null){
   for(const [jx,jy] of jaws){
     let dx=b.x-jx,dy=b.y-jy,dist2=dx*dx+dy*dy;
     const min=rad+jawRadius;
-    if(dist2>=min*min)continue;
+    if(dist2>=min*min){
+      // A fast near-tangent path can cross the rounded rubber jaw and
+      // leave its contact circle between 120Hz samples. Endpoints alone
+      // miss that real rebound, letting a ball skim straight through a lip.
+      // Only the first (swept) pass has a previous position. The post-
+      // contact overlap pass deliberately retains its old endpoint logic.
+      if(previous){
+        const sx=previous[0]-jx,sy=previous[1]-jy;
+        const mx=b.x-previous[0],my=b.y-previous[1];
+        const aa=mx*mx+my*my,bb=2*(sx*mx+sy*my);
+        const cc=sx*sx+sy*sy-min*min;
+        if(cc>=0&&aa>1e-12&&bb<0){
+          const disc=bb*bb-4*aa*cc;
+          if(disc>=0){
+            const entry=(-bb-Math.sqrt(disc))/(2*aa);
+            if(entry>=0&&entry<=1){
+              const hitX=previous[0]+mx*entry;
+              const hitY=previous[1]+my*entry;
+              const nx=(hitX-jx)/min,ny=(hitY-jy)/min;
+              const rebounded=reflectCushion(b,nx,ny,.76,.04);
+              if(rebounded){
+                // Reconstruct the remaining fraction AFTER the actual
+                // jaw impulse, instead of teleporting to the old endpoint.
+                b.x=hitX+nx*.001+b.vx*stepScale*(1-entry);
+                b.y=hitY+ny*.001+b.vy*stepScale*(1-entry);
+                if(shot&&shot.firstHit===null)pendingPreContactRails.push(entry);
+              }
+            }
+          }
+        }
+      }
+      continue;
+    }
     let d=Math.sqrt(dist2),nx,ny;
     if(d<1e-7){const speed=Math.hypot(b.vx,b.vy);nx=speed?-b.vx/speed:1;ny=speed?-b.vy/speed:0;d=0;}
     else{nx=dx/d;ny=dy/d;}
@@ -876,7 +908,7 @@ function physics(dt){
    if(!deferForEarlierImpact)pocketBall(b);
    break;
   }
- }if(b.potted)continue;collideJaw(b,before[bi]);constrainRail(b,before[bi]);
+ }if(b.potted)continue;collideJaw(b,before[bi],scale);constrainRail(b,before[bi]);
  // Defer visible sphere rotation until after ball-ball impulses, the
  // post-contact jaw pass and final overlap projection. Rotating here would
  // account for free-flight/rail motion but NOT the collision correction:
