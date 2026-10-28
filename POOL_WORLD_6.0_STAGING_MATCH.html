@@ -91,7 +91,7 @@ function reflectCushion(b,nx,ny,restitution,friction){
    if(-vn>.06)queueSound('rail',Math.min(1,-vn/5));
   return true;
 }
-function collideJaw(b){
+function collideJaw(b,previous=null){
   // Every rubber nose lies on a cushion edge. A ball wholly inside this
   // inner rectangle cannot intersect any expanded jaw circle. Avoid twelve
   // per-ball nose checks on each 120Hz physics tick during central play;
@@ -106,8 +106,29 @@ function collideJaw(b){
     let d=Math.sqrt(dist2),nx,ny;
     if(d<1e-7){const speed=Math.hypot(b.vx,b.vy);nx=speed?-b.vx/speed:1;ny=speed?-b.vy/speed:0;d=0;}
     else{nx=dx/d;ny=dy/d;}
+    // The first jaw pass precedes swept cue/object collision detection.
+    // Record the TRUE time of this rubber-nose rebound, otherwise a legal
+    // cue hit earlier in the same tick is incorrectly called a no-rail foul.
+    // Do not infer a hit from positional correction alone: only an actual
+    // inward-velocity rebound counts. Post-contact jaw passes are unchanged.
+    let impactT=null;
+    if(previous&&shot&&shot.firstHit===null){
+      const sx=previous[0]-jx,sy=previous[1]-jy;
+      const mx=b.x-previous[0],my=b.y-previous[1];
+      const aa=mx*mx+my*my,bb=2*(sx*mx+sy*my);
+      const cc=sx*sx+sy*sy-min*min;
+      if(cc<=0)impactT=0;
+      else if(aa>1e-12&&bb<0){
+        const disc=bb*bb-4*aa*cc;
+        if(disc>=0){
+          const entry=(-bb-Math.sqrt(disc))/(2*aa);
+          if(entry>=0&&entry<=1)impactT=entry;
+        }
+      }
+    }
     b.x+=nx*(min-d+.001);b.y+=ny*(min-d+.001);
-    reflectCushion(b,nx,ny,.76,.04);
+    const rebounded=reflectCushion(b,nx,ny,.76,.04);
+    if(rebounded&&impactT!==null)pendingPreContactRails.push(impactT);
   }
 }
 
@@ -794,7 +815,7 @@ function physics(dt){
    Math.max(0,Math.min(1,((hx-fromX)*travelX+(hy-fromY)*travelY)/travel2)):1;
   const pdx=fromX+along*travelX-hx,pdy=fromY+along*travelY-hy;
   if(pdx*pdx+pdy*pdy<POCKET_CAPTURE_RADIUS2){pocketBall(b);break}
- }if(b.potted)continue;collideJaw(b);constrainRail(b,before[bi]);
+ }if(b.potted)continue;collideJaw(b,before[bi]);constrainRail(b,before[bi]);
  // Defer visible sphere rotation until after ball-ball impulses, the
  // post-contact jaw pass and final overlap projection. Rotating here would
  // account for free-flight/rail motion but NOT the collision correction:
