@@ -1173,10 +1173,21 @@ function powerFromDrag(dy,initial,height){
 }
 function powerGestureY(e){return focusActive?-e.clientX:e.clientY}
 function powerGestureCross(e){return focusActive?e.clientY:e.clientX}
+// A diagonal slip across the narrow thumb is not an intentional power pull.
+// Only reject a clearly cross-axis-dominant gesture; along-track diagonal
+// pulls remain calibrated. Re-evaluate throughout the drag so a player can
+// deliberately turn a sideways start into a real along-track pull.
+function powerCrossAxisDominates(e,dy){
+ const cross=Math.abs(powerGestureCross(e)-powerStartCross);
+ return cross>=28&&cross>Math.abs(dy)*1.5;
+}
 function powerTrackLength(){return focusActive?track.clientHeight:track.getBoundingClientRect().height}
 function padMove(e){if(!powerDrag||e.pointerId!==powerPointer)return;e.preventDefault();
  if(Math.abs(powerGestureCross(e)-powerStartCross)>12)powerCrossMoved=true;
  const dy=powerGestureY(e)-powerY;
+ // A 10-60px along-axis wobble during a sideways swipe must not change
+ // selected shot power while the finger is moving.
+ if(powerCrossAxisDominates(e,dy)){showPower(powerStart);return}
  if(Math.abs(dy)>5)powerMoved=true;
  if(Math.abs(dy)<=5&&powerMoved){showPower(powerStart);return}
  if(Math.abs(dy)>5)showPower(powerFromDrag(dy,powerStart,powerTrackLength()));
@@ -1186,6 +1197,9 @@ function padEnd(e){if(!powerDrag||e.pointerId!==powerPointer)return;
  const crossSlipped=powerCrossMoved||Math.abs(powerGestureCross(e)-powerStartCross)>12;
  powerDrag=false;powerPointer=null;powerTapOnBareTrack=false;powerCrossMoved=false;
  if(e.type==='pointercancel'||e.type==='lostpointercapture'){showPower(prior);return}
+ // A coalesced release may have no pointermove: reject the sideways-dominant
+ // final vector before applying power or triggering an accidental shot.
+ if(powerCrossAxisDominates(e,dy)){showPower(prior);return}
  if(e.type==='pointerup'){
   if(Math.abs(dy)<=5){
    if(powerMoved)showPower(prior);
