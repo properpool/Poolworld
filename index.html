@@ -620,16 +620,20 @@ function constrainRail(b){for(let axisIndex=0;axisIndex<2;axisIndex++){const axi
   // within a broad 1.2*pocket mouth band was potted, even when its centre
   // missed the actual pocket. Rebound an overrun outside the capture well.
   if(pos>=lo-rad&&pos<=hi+rad){
-   // A slow near-miss can cross the open pocket mouth, exhaust its rolling
-   // speed BEFORE reaching the circular well, and freeze beyond the cloth.
-   // Keep the gap open for genuine pots: project the remaining coast along
-   // the actual velocity and allow entry only when that path reaches a well.
-   // The friction model below is 120Hz: half-speed displacement per tick
-   // with a half-scaled .012 + speed-dependent rolling deceleration.
+   // A fast ball moving AWAY from its nearest pocket well can enter the
+   // open mouth then snap backwards a radius on the next frame. Rescue only
+   // this unambiguous receding near miss; an approaching high-speed cut may
+   // legitimately use a jaw deflection and must retain its existing path.
+   // Gentle shots keep the established friction-limited coast check.
    const speed=Math.hypot(b.vx,b.vy);
-   // Preserve full-speed entry into the mouth and existing cut-pot paths.
-   // Only intervene once a slow ball can no longer coast into a pocket.
-   if(speed>.08)continue;
+   if(speed>.08){
+    let nearest=null,dist2=Infinity;
+    for(const h of holes){
+     const dx=h[0]-b.x,dy=h[1]-b.y,d2=dx*dx+dy*dy;
+     if(d2<dist2){dist2=d2;nearest=h}
+    }
+    if(nearest&&(nearest[0]-b.x)*b.vx+(nearest[1]-b.y)*b.vy>0)continue;
+   }
    const decel=(.012+.0016*Math.min(speed,4))*.5;
    const coast=speed>1e-9?speed*speed/(4*decel):0;
    let canReachWell=false;
