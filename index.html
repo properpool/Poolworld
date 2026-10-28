@@ -814,7 +814,40 @@ function physics(dt){
   const along=travel2>1e-12?
    Math.max(0,Math.min(1,((hx-fromX)*travelX+(hy-fromY)*travelY)/travel2)):1;
   const pdx=fromX+along*travelX-hx,pdy=fromY+along*travelY-hy;
-  if(pdx*pdx+pdy*pdy<POCKET_CAPTURE_RADIUS2){pocketBall(b);break}
+  if(pdx*pdx+pdy*pdy<POCKET_CAPTURE_RADIUS2){
+   // A moving object can enter a pocket AFTER an earlier cue/object impact
+   // inside this SAME 120Hz step. Pocketing it before the contact solver
+   // erases the real impulse and first-hit, incorrectly awarding a foul.
+   // Defer only when the analytically swept cue contact precedes the first
+   // pocket-well entry. Other pockets keep immediate capture and scoring.
+   let deferForCueImpact=false;
+   if(bi>0&&shot&&!balls[0].potted&&travel2>1e-12){
+    const startDX=fromX-hx,startDY=fromY-hy;
+    const startDistance2=startDX*startDX+startDY*startDY;
+    if(startDistance2>=POCKET_CAPTURE_RADIUS2){
+     const pocketB=2*(startDX*travelX+startDY*travelY);
+     const pocketC=startDistance2-POCKET_CAPTURE_RADIUS2;
+     const pocketDisc=pocketB*pocketB-4*travel2*pocketC;
+     if(pocketDisc>=0){
+      const pocketT=(-pocketB-Math.sqrt(pocketDisc))/(2*travel2);
+      const cue=balls[0],sx=fromX-before[0][0],sy=fromY-before[0][1];
+      const relDX=travelX-(cue.x-before[0][0]);
+      const relDY=travelY-(cue.y-before[0][1]);
+      const relA=relDX*relDX+relDY*relDY;
+      const relB=2*(sx*relDX+sy*relDY);
+      const relC=sx*sx+sy*sy-(2*rad)**2;
+      const relDisc=relB*relB-4*relA*relC;
+      if(pocketT>0&&pocketT<=1&&relC>0&&relA>1e-12&&
+         relB<0&&relDisc>=0){
+       const cueT=(-relB-Math.sqrt(relDisc))/(2*relA);
+       deferForCueImpact=cueT>=0&&cueT<pocketT-1e-7;
+      }
+     }
+    }
+   }
+   if(!deferForCueImpact)pocketBall(b);
+   break;
+  }
  }if(b.potted)continue;collideJaw(b,before[bi]);constrainRail(b,before[bi]);
  // Defer visible sphere rotation until after ball-ball impulses, the
  // post-contact jaw pass and final overlap projection. Rotating here would
