@@ -942,7 +942,7 @@ function frame(t){const previousFrame=last;const rawElapsed=previousFrame?Math.m
  const recentlyFired=shotFirstFramePending&&Number.isFinite(shotStartAt)&&
    previousFrame&&shotStartAt>=previousFrame&&shotStartAt<=t&&
    t-shotStartAt<=50;
- if(shooting&&rawElapsed>1&&!recentlyFired){
+ if(shooting&&rawElapsed>=.6&&!recentlyFired){
   elapsed=0;accumulator=0;slowFrameStreak=0;
   for(let i=0;i<balls.length;i++){
    const b=balls[i],p=beforePositions[i],q=beforeRollQ[i],roll=b.rollQ;
