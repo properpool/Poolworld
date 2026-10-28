@@ -1105,7 +1105,13 @@ function frame(t){const previousFrame=last;const rawElapsed=previousFrame?Math.m
    rawElapsed>=.18&&rawElapsed<=.35&&!recentlyFired;
  if(isolatedShortHitch)deferredSlowGap=rawElapsed;
  else if(deferredSlowGap){
-  if(shooting&&rawElapsed>=.064&&rawElapsed<=.35&&!recentlyFired){
+  // A single 70-125ms callback following a frozen 180-350ms pause
+  // is not proof of sustained 3-5fps play. Replaying the paused interval
+  // here previously jumped 30+ ticks in one rendered frame. Only another
+  // 180-350ms callback establishes that the initial gap belongs to
+  // sustained low-FPS playback; otherwise discard the frozen interval and
+  // simulate just the new callback through the ordinary bounded budget.
+  if(shooting&&rawElapsed>=.18&&rawElapsed<=.35&&!recentlyFired){
    elapsed=Math.min(.75,elapsed+deferredSlowGap);
    slowFrameStreak=1;
   }
