@@ -619,7 +619,28 @@ function constrainRail(b){for(let axisIndex=0;axisIndex<2;axisIndex++){const axi
   // above may remove a ball. Previously any ball crossing the outer rail
   // within a broad 1.2*pocket mouth band was potted, even when its centre
   // missed the actual pocket. Rebound an overrun outside the capture well.
-  if(pos>=lo-rad&&pos<=hi+rad)continue;
+  if(pos>=lo-rad&&pos<=hi+rad){
+   // A slow near-miss can cross the open pocket mouth, exhaust its rolling
+   // speed BEFORE reaching the circular well, and freeze beyond the cloth.
+   // Keep the gap open for genuine pots: project the remaining coast along
+   // the actual velocity and allow entry only when that path reaches a well.
+   // The friction model below is 120Hz: half-speed displacement per tick
+   // with a half-scaled .012 + speed-dependent rolling deceleration.
+   const speed=Math.hypot(b.vx,b.vy);
+   const decel=(.012+.0016*Math.min(speed,4))*.5;
+   const coast=speed>1e-9?speed*speed/(4*decel):0;
+   let canReachWell=false;
+   for(const [hx,hy] of holes){
+    const towards=speed>1e-9?((hx-b.x)*b.vx+(hy-b.y)*b.vy)/speed:0;
+    const along=Math.max(0,Math.min(coast,towards));
+    const px=b.x+(speed>1e-9?b.vx/speed*along:0)-hx;
+    const py=b.y+(speed>1e-9?b.vy/speed*along:0)-hy;
+    if(px*px+py*py<POCKET_CAPTURE_RADIUS2){canReachWell=true;break}
+   }
+   if(canReachWell)continue;
+   // Missed the well with insufficient momentum: rebound from the pocket
+   // lip rather than leaving an unreachable, stationary ball off the cloth.
+  }
  }b[axis]=Math.max(lo,Math.min(hi,pos));const vel=axis==='x'?'vx':'vy';// Inward wall normal. Rail restitution and tangent friction are
       // dissipative even for large English; spin can drive rail throw only
       // by releasing rotational energy already carried by the ball.
