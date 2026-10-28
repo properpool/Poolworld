@@ -29,7 +29,7 @@ with sync_playwright() as pw:
         page.on('pageerror',lambda e:errors.append(str(e)))
         page.set_content(HTML,wait_until='load')
         tag=f'{width}x{height}'
-        for scenario in ('scratch','scratch-quick-place','object-pot'):
+        for scenario in ('scratch','scratch-quick-place','scratch-quick-confirm','object-pot'):
             state=page.evaluate("""(scenario)=>{
                 freshRack();breakShot=false;showPower(75);
                 shot={player:turn,breakShot:false,firstHit:null,
@@ -79,6 +79,18 @@ with sync_playwright() as pw:
                 check(label+' live cue appears after sink completes',
                     after['drawn']==['live'] and after['ghosts']==0 and
                     after['ballInHand'],after)
+            if scenario=='scratch-quick-confirm':
+                confirm=page.evaluate("""()=>{
+                    document.getElementById('shoot').click();
+                    let drawn=[];const original=drawBall;
+                    drawBall=function(b,q){if(b.id===0)drawn.push(pocketVisuals.includes(b)?'sink':'live');return original(b,q)};
+                    try{render()}finally{drawBall=original}
+                    return {ballInHand,shooting,drawn,
+                        ghosts:pocketVisuals.filter(g=>g.id===0).length};
+                }""")
+                check(label+' immediate PLACE CUE retires stale scratch ghost',
+                    not confirm['ballInHand'] and not confirm['shooting'] and
+                    confirm['ghosts']==0 and confirm['drawn']==['live'],confirm)
             if scenario=='scratch-quick-place':
                 page.mouse.move(state['rect']['x'],state['rect']['y'])
                 page.mouse.down()
