@@ -155,7 +155,7 @@ function pocketBall(b){
 function resolveShot(){if(!shot)return;const s=shot;shot=null;shooting=false;cueStrike=null;shotFirstFramePending=false;
  // A completed shot owns its accumulated physics time. Do not carry slow-frame
  // debt into the next player's shot if SHOOT is pressed before another rAF.
- accumulator=0;slowFrameStreak=0;
+ accumulator=0;slowFrameStreak=0;recentNormalFrame=false;deferredSlowGap=0;
 // The whole table has settled. A frozen side-spin or follow value must not
 // survive the turn and alter a later collision on a stationary object ball.
 // Preserve rollQ (the visible resting orientation), but clear kinetic spin.
@@ -229,7 +229,7 @@ function rollMarker(q,p,out){
 }
 const ROLL_STRIPE_AXIS=[0,1,0],ROLL_MARKER_OUT=[0,0,0];
 const ROLL_MEASLE_MARKS=[[0,0,1],[0,0,-1],[1,0,0],[-1,0,0],[0,1,0],[0,-1,0]];
-function rack(){pocketVisuals.length=0;abandonCuePlacementGesture();abandonActiveShotGestures();abandonFineAimHolds();balls=[makeBall(0,L+(R-L)*.24,(T+B)/2)];const bx=L+(R-L)*.71,cy=(T+B)/2,step=rad*2.035;let ids=[1,9,2,10,8,11,3,12,4,13,5,14,6,15,7],n=0;for(let row=0;row<5;row++)for(let j=0;j<=row;j++){const x=bx+row*step*.866,y=cy+(j-row/2)*step;balls.push(makeBall(ids[n++],x,y))}aim=0;shooting=false;shot=null;cueStrike=null;shotFirstFramePending=false;history=null;events.length=0;accumulator=0;slowFrameStreak=0;pendingAimReleaseShot=false;turn=1;groups={1:null,2:null};ballInHand=false;gameOver=false;winner=null;breakShot=true;$('status').textContent='Player 1 to break. Aim and pull the power handle, or press SHOOT.';updateHUD()}
+function rack(){pocketVisuals.length=0;abandonCuePlacementGesture();abandonActiveShotGestures();abandonFineAimHolds();balls=[makeBall(0,L+(R-L)*.24,(T+B)/2)];const bx=L+(R-L)*.71,cy=(T+B)/2,step=rad*2.035;let ids=[1,9,2,10,8,11,3,12,4,13,5,14,6,15,7],n=0;for(let row=0;row<5;row++)for(let j=0;j<=row;j++){const x=bx+row*step*.866,y=cy+(j-row/2)*step;balls.push(makeBall(ids[n++],x,y))}aim=0;shooting=false;shot=null;cueStrike=null;shotFirstFramePending=false;history=null;events.length=0;accumulator=0;slowFrameStreak=0;recentNormalFrame=false;deferredSlowGap=0;pendingAimReleaseShot=false;turn=1;groups={1:null,2:null};ballInHand=false;gameOver=false;winner=null;breakShot=true;$('status').textContent='Player 1 to break. Aim and pull the power handle, or press SHOOT.';updateHUD()}
 // Explicitly starting a NEW game resets the previous game's finesse power
 // and English. Internal rack() remains a neutral fixture/reset primitive.
 function freshRack(){rack();showPower(45);spin=0;follow=0;$('spin').value=0;$('follow').value=0;renderDirty=true}
@@ -493,6 +493,9 @@ for(let b of balls){
 const STEP=1/120,POCKET_CAPTURE_RADIUS2=(pocket*.74)**2,CUE_STROKE_DURATION=.16;let accumulator=0,last=0,renderDirty=true,slowFrameStreak=0,cueStrike=null;
 // rAF time before SHOOT must not be charged to the newly fired ball.
 let shotStartAt=0,shotFirstFramePending=false;
+// Remember whether the last callback was genuinely smooth; a lone
+// 250-350ms Android scheduling stall must not fast-forward the cue ball.
+let recentNormalFrame=false,deferredSlowGap=0;
 // Determine which object the cue reaches first within a physics tick.
 // Iteration order through the rack is not a valid substitute for contact time:
 // in a tight cluster the cue can overlap two balls during the same 120Hz tick.
@@ -943,7 +946,23 @@ function frame(t){const previousFrame=last;const rawElapsed=previousFrame?Math.m
  const recentlyFired=shotFirstFramePending&&Number.isFinite(shotStartAt)&&
    previousFrame&&shotStartAt>=previousFrame&&shotStartAt<=t&&
    t-shotStartAt<=50;
- if(shooting&&(rawElapsed>=.6||(rawElapsed>.35&&slowFrameStreak<2))&&!recentlyFired){
+ // A 260-340ms callback after normal 60Hz pacing is likely a single OS/GC
+ // interruption, not genuine 3-4fps play. Freeze this one frame instead of
+ // jumping eight ticks and carrying ~200ms of stale physics debt. If the
+ // following callback is ALSO slow, repay the deferred interval using the
+ // established bounded sustained-low-FPS budget; if smooth, discard it.
+ const isolatedShortHitch=shooting&&recentNormalFrame&&
+   rawElapsed>=.25&&rawElapsed<=.35&&!recentlyFired;
+ if(isolatedShortHitch)deferredSlowGap=rawElapsed;
+ else if(deferredSlowGap){
+  if(shooting&&rawElapsed>=.064&&rawElapsed<=.35&&!recentlyFired){
+   elapsed=Math.min(.75,elapsed+deferredSlowGap);
+   slowFrameStreak=1;
+  }
+  deferredSlowGap=0;
+ }
+ recentNormalFrame=shooting&&rawElapsed>0&&rawElapsed<.05;
+ if(shooting&&(isolatedShortHitch||rawElapsed>=.6||(rawElapsed>.35&&slowFrameStreak<2))&&!recentlyFired){
   elapsed=0;accumulator=0;slowFrameStreak=0;
   for(let i=0;i<balls.length;i++){
    const b=balls[i],p=beforePositions[i],q=beforeRollQ[i],roll=b.rollQ;
@@ -1003,7 +1022,7 @@ function shoot(){if(shooting||gameOver||ballInHand||balls[0].potted)return false
  // change the shot strength, or fire a second shot after the table settles.
  abandonActiveShotGestures();abandonFineAimHolds();
  // Each committed shot starts from its own zero-debt simulation clock.
- accumulator=0;slowFrameStreak=0;history=snapshot();shot={player:turn,breakShot,firstHit:null,railAfterContact:false,pocketed:[],scratch:false,targetEight:groups[turn]!==null&&remainingFor(turn)===0};const b=balls[0],speed=shotSpeed(power,breakShot);b.vx=Math.cos(aim)*speed;b.vy=Math.sin(aim)*speed;b.spin=spin/100*1.2;b.follow=follow/100*2.5;shooting=true;
+ accumulator=0;slowFrameStreak=0;recentNormalFrame=false;deferredSlowGap=0;history=snapshot();shot={player:turn,breakShot,firstHit:null,railAfterContact:false,pocketed:[],scratch:false,targetEight:groups[turn]!==null&&remainingFor(turn)===0};const b=balls[0],speed=shotSpeed(power,breakShot);b.vx=Math.cos(aim)*speed;b.vy=Math.sin(aim)*speed;b.spin=spin/100*1.2;b.follow=follow/100*2.5;shooting=true;
  cueStrike={x:b.x,y:b.y,aim,power,elapsed:0};
  // The first rendered shot frame can precede its first physics tick.
  // Seed previous positions now, so it cannot interpolate from an old rack.
