@@ -1,4 +1,4 @@
-"""Regression: a single 460-580ms phone animation interruption must not fast-forward a moving shot.
+"""Regression: a single 360-580ms phone animation interruption must not fast-forward a moving shot.
 
 A short OS/browser scheduling pause after normal 60Hz motion is not sustained
 low-FPS play. The returning callback must retain the cue-ball pose and velocity,
@@ -30,7 +30,7 @@ with sync_playwright() as pw:
         page.on('pageerror',lambda e:errors.append(str(e)))
         page.evaluate('window.requestAnimationFrame=()=>0')
         page.set_content(HTML,wait_until='load')
-        for gap in (460,520,580):
+        for gap in (360,390,430,460,520,580):
             for power in (25,75):
                 for warmup in (1,8):
                     result=page.evaluate("""({gap,power,warmup})=>{
