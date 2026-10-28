@@ -533,17 +533,21 @@ function earliestCueContact(before){
 function resolveSimultaneousContacts(batch,start=0,end=batch.length){
  const pairs=[];
  for(let batchIndex=start;batchIndex<end;batchIndex++){
-  const {a,b}=batch[batchIndex];
+  const {a,b,swept,nx:sweptNx,ny:sweptNy}=batch[batchIndex];
   if(a.potted||b.potted)continue;
   const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),min=2*rad;
-  if(d>=min)continue;
+  // A fast cue can enter and leave TWO contact circles within one 120Hz
+  // tick. Both endpoints are separated, but the swept normals still carry
+  // simultaneous physical impulses. Ignoring them creates a lopsided split.
+  if(d>=min&&!swept)continue;
   let nx,ny;
-  if(d<1e-7){
+  if(swept){nx=sweptNx;ny=sweptNy}
+  else if(d<1e-7){
    const rx=b.vx-a.vx,ry=b.vy-a.vy,len=Math.hypot(rx,ry);
    nx=len>1e-8?-rx/len:1;ny=len>1e-8?-ry/len:0;
   }else{nx=dx/d;ny=dy/d}
   const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
-  if(rel<0)pairs.push({a,b,nx,ny,rel,overlap:min-d});
+  if(rel<0)pairs.push({a,b,nx,ny,rel,overlap:swept?0:min-d});
  }
  if(pairs.length<2)return false;
  const members=[...new Set(pairs.flatMap(p=>[p.a,p.b]))];
@@ -823,7 +827,9 @@ for(let ci=0;ci<contacts.length;){
  // impacts from a tight cluster using the coupled solver rather than
  // letting a tiny finger-angle or rack-offset difference arbitrarily
  // choose the first impulse. Wider-separated impacts remain sequential.
- while(end<contacts.length&&!current.swept&&!contacts[end].swept&&
+ // Group equal-time swept and overlapping contacts alike. A swept-only
+  // collision is a real impulse even when its endpoint spheres separate.
+  while(end<contacts.length&&
        Math.abs(contacts[end].t-current.t)<.012)end++;
  if(end-ci>1&&resolveSimultaneousContacts(contacts,ci,end)){ci=end;continue}
  ci++;
