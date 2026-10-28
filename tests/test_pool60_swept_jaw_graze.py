@@ -35,11 +35,13 @@ with sync_playwright() as pw:
                               const jy=top?T:B, inward=top?1:-1;
                               const radius=rad+jawRadius;
                               const offset=scenario==='clean-miss'?radius+.5:
-                                           scenario==='endpoint-overlap'?radius-.8:
+                                           scenario==='endpoint-overlap'?radius-3.5:
                                            radius-.02;
                               const speed=shotSpeed(level,false);
                               const cue=makeBall(0,300,285);
-                              const b=makeBall(1,jx-direction*speed*.25,jy+inward*offset);
+                              const startX=scenario==='endpoint-overlap'?jx-direction*(speed*.5+8):
+                                           jx-direction*speed*.25;
+                              const b=makeBall(1,startX,jy+inward*offset);
                               b.vx=direction*speed;
                               balls=[cue,b];turn=1;groups={1:'solids',2:'stripes'};
                               breakShot=false;ballInHand=false;gameOver=false;
