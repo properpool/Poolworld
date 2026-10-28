@@ -932,7 +932,7 @@ function settled(){
 // retains the original eight-step safety limit. Idle owes no simulation time.
 // This preserves shot speed, NOT visual smoothness at a genuinely low FPS.
 function frame(t){const previousFrame=last;const rawElapsed=previousFrame?Math.max(0,(t-previousFrame)/1000):0;let elapsed=Math.min(rawElapsed,rawElapsed>.35?.25:.35);last=t;
- // A single 450-599ms mobile scheduling interruption after ordinary
+ // A single 350-599ms mobile scheduling interruption after ordinary
  // frame pacing is a pause, not sustained 3-14fps play. Previously its
  // clipped 250ms advanced eight ticks immediately and banked ~183ms debt,
  // making the cue ball jump on this and subsequent frames. Freeze isolated
@@ -943,7 +943,7 @@ function frame(t){const previousFrame=last;const rawElapsed=previousFrame?Math.m
  const recentlyFired=shotFirstFramePending&&Number.isFinite(shotStartAt)&&
    previousFrame&&shotStartAt>=previousFrame&&shotStartAt<=t&&
    t-shotStartAt<=50;
- if(shooting&&(rawElapsed>=.6||(rawElapsed>=.45&&slowFrameStreak<2))&&!recentlyFired){
+ if(shooting&&(rawElapsed>=.6||(rawElapsed>.35&&slowFrameStreak<2))&&!recentlyFired){
   elapsed=0;accumulator=0;slowFrameStreak=0;
   for(let i=0;i<balls.length;i++){
    const b=balls[i],p=beforePositions[i],q=beforeRollQ[i],roll=b.rollQ;
