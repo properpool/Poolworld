@@ -23,6 +23,7 @@ with sync_playwright() as pw:
         page.evaluate('window.requestAnimationFrame=()=>0')
         errors=[]
         page.on('pageerror',lambda e:errors.append(str(e)))
+        page.set_content(HTML,wait_until='load')
         for edge in ('top','bottom'):
             for side in (-1,1):
                 for speed in (.14,.22):
