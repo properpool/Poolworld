@@ -202,6 +202,8 @@ jobs:
         run: python tests/test_pool60_shot_debt_reset.py
       - name: Gentle rail rebounds count after legal object contact (four viewports)
         run: python tests/test_pool60_soft_rail_foul.py
+      - name: Slow pocket-mouth near misses cannot strand balls outside cloth (four viewports)
+        run: python tests/test_pool60_pocket_lip_stall.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
