@@ -612,6 +612,10 @@ function reconcileDeferredRailsAfterCueContact(contactT){
 // established restitution and spin response below.
 function resolveSimultaneousContacts(batch,start=0,end=batch.length){
  const pairs=[];
+ // The first member of a near-simultaneous batch may be an object/object
+ // collision. Rail chronology must use the earliest REAL cue impulse in
+ // the batch, not the batch's earlier non-cue contact time.
+ let firstCueImpactT=Infinity;
  for(let batchIndex=start;batchIndex<end;batchIndex++){
   const {a,b,swept,nx:sweptNx,ny:sweptNy}=batch[batchIndex];
   if(a.potted||b.potted)continue;
@@ -627,7 +631,10 @@ function resolveSimultaneousContacts(batch,start=0,end=batch.length){
    nx=len>1e-8?-rx/len:1;ny=len>1e-8?-ry/len:0;
   }else{nx=dx/d;ny=dy/d}
   const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
-  if(rel<0)pairs.push({a,b,nx,ny,rel,overlap:swept?0:min-d});
+  if(rel<0){
+   pairs.push({a,b,nx,ny,rel,overlap:swept?0:min-d});
+   if(a.id===0||b.id===0)firstCueImpactT=Math.min(firstCueImpactT,batch[batchIndex].t);
+  }
  }
  if(pairs.length<2)return false;
  const members=[...new Set(pairs.flatMap(p=>[p.a,p.b]))];
@@ -702,7 +709,7 @@ function resolveSimultaneousContacts(batch,start=0,end=batch.length){
  }
  if(shot&&shot.firstHit===null){
   const cueHits=pairs.filter(p=>p.a.id===0||p.b.id===0).map(p=>p.a.id===0?p.b.id:p.a.id);
-  if(cueHits.length){shot.firstHit=Math.min(...cueHits);reconcileDeferredRailsAfterCueContact(batch[start].t)}
+  if(cueHits.length){shot.firstHit=Math.min(...cueHits);reconcileDeferredRailsAfterCueContact(firstCueImpactT)}
  }
  return true;
 }
