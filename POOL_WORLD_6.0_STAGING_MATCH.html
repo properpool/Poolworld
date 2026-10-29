@@ -1102,7 +1102,7 @@ function frame(t){const previousFrame=last;const rawElapsed=previousFrame?Math.m
  // If the next callback is ALSO slow, repay the deferred interval through
  // the bounded sustained-low-FPS budget; if smooth, discard it.
  const isolatedShortHitch=shooting&&recentNormalFrame&&
-   rawElapsed>=.18&&rawElapsed<=.35&&!recentlyFired;
+   rawElapsed>=.16&&rawElapsed<=.35&&!recentlyFired;
  // If a frozen hitch was followed by ONE slower callback, any leftover
  // simulation debt from that callback must not be repaid in a single 60Hz
  // frame. Preserve the debt if the next callback is ALSO slow: that is
@@ -1119,8 +1119,13 @@ function frame(t){const previousFrame=last;const rawElapsed=previousFrame?Math.m
   // 180-350ms callback establishes that the initial gap belongs to
   // sustained low-FPS playback; otherwise discard the frozen interval and
   // simulate just the new callback through the ordinary bounded budget.
-  if(shooting&&rawElapsed>=.18&&rawElapsed<=.35&&!recentlyFired){
-   elapsed=Math.min(.75,elapsed+deferredSlowGap);
+  if(shooting&&rawElapsed>=.16&&rawElapsed<=.35&&!recentlyFired){
+   // A 160-179ms gap can be one Android interruption or sustained ~6fps.
+   // On a second slow callback, repay the first interval through bounded
+   // simulation debt rather than one 40-step visual jump. Preserve the
+   // established >=180ms sustained-low-FPS path and calibrated impulse.
+   if(deferredSlowGap<.18)accumulator+=deferredSlowGap;
+   else elapsed=Math.min(.75,elapsed+deferredSlowGap);
    slowFrameStreak=1;
   }else{
    // The frozen interval is abandoned; only the next ordinary frame
