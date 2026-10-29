@@ -574,7 +574,7 @@ let recentNormalFrame=false,deferredSlowGap=0,postHitchTail=false;
 function earliestCueContact(before){
  if(!shot||shot.firstHit!==null||balls[0].potted)return;
  const cue=balls[0],cx=cue.x-before[0][0],cy=cue.y-before[0][1];
- let first=null;
+ let first=null,touchingClosing=false;
  for(let i=1;i<balls.length;i++){
   const b=balls[i];if(b.potted)continue;
   const sx=before[i][0]-before[0][0],sy=before[i][1]-before[0][1];
@@ -586,7 +586,20 @@ function earliestCueContact(before){
   // balls. A separating or nearly tangential path can enter/exit the tiny
   // tolerance without ever exchanging momentum; calling that a hit would
   // falsely legalise a shot and hide its true first object contact.
-  if(c<=0)continue;
+  if(c<=0){
+   // A real closing t=0 contact must beat a later swept hit. Defer first-hit
+   // selection to the impulse solver only when this touching pair still
+   // overlaps AND is closing. Separating/tangent touches remain ignored.
+   const ex=b.x-cue.x,ey=b.y-cue.y,d2=ex*ex+ey*ey;
+   if(d2<(2*rad)**2){
+    const d=Math.sqrt(d2),rvx=b.vx-cue.vx,rvy=b.vy-cue.vy;
+    const rv=Math.hypot(rvx,rvy);
+    const nx=d>1e-6?ex/d:rv>1e-8?-rvx/rv:1;
+    const ny=d>1e-6?ey/d:rv>1e-8?-rvy/rv:0;
+    if(rvx*nx+rvy*ny<0)touchingClosing=true;
+   }
+   continue;
+  }
   else if(a>1e-12){
    const bb=2*(sx*dx+sy*dy),disc=bb*bb-4*a*c;
    if(bb<0&&disc>=0)t=(-bb-Math.sqrt(disc))/(2*a);
@@ -594,7 +607,8 @@ function earliestCueContact(before){
   if(t!==null&&t>=0&&t<=1&&(!first||t<first.t-1e-9||(Math.abs(t-first.t)<=1e-9&&b.id<first.id)))
    first={id:b.id,t};
  }
- if(first){
+ // The t=0 closing impulse must be recorded before any later swept hit.
+ if(first&&!touchingClosing){
   shot.firstHit=first.id;
   // Rail reflections are processed before the swept cue-contact solver in
   // this tick. Recover their actual order: a rail AFTER first contact is
