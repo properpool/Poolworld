@@ -262,6 +262,8 @@ jobs:
         run: python tests/test_pool60_simultaneous_rail_order.py
       - name: Near-simultaneous cue first-hit chronology and foul decision (1300 checks)
         run: python tests/test_pool60_simultaneous_first_hit_order.py
+      - name: Same-tick solid and stripe pocket chronology assigns correct group (724 checks)
+        run: python tests/test_pool60_pocket_group_chronology.py
       - name: Store test results
         if: always()
         uses: actions/upload-artifact@v4
