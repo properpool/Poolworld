@@ -593,6 +593,17 @@ function earliestCueContact(before){
   }
  }
 }
+// A real cue impulse against an already-touching ball is awarded by the
+// contact solver, not the swept first-contact detector. Cushion rebounds
+// earlier in this SAME physics tick were deferred until cue contact time
+// was known. Reconcile those recorded times when the impulse solver first
+// awards the hit, otherwise a legal t=0 contact followed by a rail rebound
+// is incorrectly penalised as a no-rail foul.
+function reconcileDeferredRailsAfterCueContact(contactT){
+ for(const railT of pendingPreContactRails){
+  if(railT>contactT+1e-7){shot.railAfterContact=true;break}
+ }
+}
 // A genuinely simultaneous contact group must be solved together. Applying
 // each impulse in sequence produces a visibly asymmetric split when a cue
 // strikes two equidistant balls. Projected, damped Jacobi solves the coupled
@@ -691,7 +702,7 @@ function resolveSimultaneousContacts(batch,start=0,end=batch.length){
  }
  if(shot&&shot.firstHit===null){
   const cueHits=pairs.filter(p=>p.a.id===0||p.b.id===0).map(p=>p.a.id===0?p.b.id:p.a.id);
-  if(cueHits.length)shot.firstHit=Math.min(...cueHits);
+  if(cueHits.length){shot.firstHit=Math.min(...cueHits);reconcileDeferredRailsAfterCueContact(batch[start].t)}
  }
  return true;
 }
@@ -991,7 +1002,7 @@ for(let ci=0;ci<contacts.length;){
  else{nx=dx/d;ny=dy/d}
  const overlap=current.swept?0:min-d;const correction=overlap*.51;
  a.x-=nx*correction;a.y-=ny*correction;b.x+=nx*correction;b.y+=ny*correction;
- const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(rel>=0)continue;if(shot&&shot.firstHit===null&&(a.id===0||b.id===0))shot.firstHit=a.id===0?b.id:a.id;// Equal-mass normal impulse, coefficient of restitution 0.955.
+ const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(rel>=0)continue;if(shot&&shot.firstHit===null&&(a.id===0||b.id===0)){shot.firstHit=a.id===0?b.id:a.id;reconcileDeferredRailsAfterCueContact(current.t)}// Equal-mass normal impulse, coefficient of restitution 0.955.
  const cueIncomingX=a.vx,cueIncomingY=a.vy;
  const impulse=-(1+.955)*rel/2;a.vx-=impulse*nx;a.vy-=impulse*ny;b.vx+=impulse*nx;b.vy+=impulse*ny;
  const tx=-ny,ty=nx;
