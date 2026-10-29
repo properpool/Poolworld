@@ -898,11 +898,18 @@ function physics(dt){
        const dx=travelX-odx,dy=travelY-ody;
        const aa=dx*dx+dy*dy,bb=2*(sx*dx+sy*dy);
        const cc=sx*sx+sy*sy-(2*rad)**2;
-       if(cc<=0||aa<=1e-12||bb>=0)continue;
-       const disc=bb*bb-4*aa*cc;
-       if(disc<0)continue;
-       const hitT=(-bb-Math.sqrt(disc))/(2*aa);
-       if(hitT<0||hitT>=pocketT-1e-7)continue;
+       // A pre-touching ball receives its closing t=0 impact before pocket
+       // capture. Previously cc<=0 discarded that real impulse entirely.
+       // Separating and tangent-only contacts must not defer the pocket.
+       if(aa<=1e-12||bb>=0)continue;
+       let hitT=0;
+       if(cc>0){
+        const disc=bb*bb-4*aa*cc;
+        if(disc<0)continue;
+        hitT=(-bb-Math.sqrt(disc))/(2*aa);
+        if(hitT<0)continue;
+       }
+       if(hitT>=pocketT-1e-7)continue;
        // A later-processed striker may itself enter a pocket first.
        let strikerPocketedEarlier=false;
        if(oi>bi){
