@@ -1119,7 +1119,8 @@ function frame(t){const previousFrame=last;const rawElapsed=previousFrame?Math.m
   // 180-350ms callback establishes that the initial gap belongs to
   // sustained low-FPS playback; otherwise discard the frozen interval and
   // simulate just the new callback through the ordinary bounded budget.
-  if(shooting&&rawElapsed>=.16&&rawElapsed<=.35&&!recentlyFired){
+  if(shooting&&rawElapsed<=.35&&!recentlyFired&&
+     (rawElapsed>=.18||(deferredSlowGap<.18&&rawElapsed>=.16))){
    // A 160-179ms gap can be one Android interruption or sustained ~6fps.
    // On a second slow callback, repay the first interval through bounded
    // simulation debt rather than one 40-step visual jump. Preserve the
