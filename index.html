@@ -197,7 +197,7 @@ function canPlace(x,y){return Number.isFinite(x)&&Number.isFinite(y)&&x>=L+rad+2
 function cuePosition(){const x0=L+(R-L)*.24,y0=(T+B)/2;if(canPlace(x0,y0))return [x0,y0];for(let y=T+rad+6;y<=B-rad-6;y+=rad*2.3)for(let x=L+rad+6;x<=R-rad-6;x+=rad*2.3)if(canPlace(x,y))return [x,y];return [x0,y0]}
 function snapshot(){return {balls:balls.map(b=>({...b,rollQ:b.rollQ?[...b.rollQ]:[1,0,0,0]})),turn,groups:{...groups},ballInHand,gameOver,winner,breakShot,aim,power,spin,follow}}
 function restore(state){pocketVisuals.length=0;abandonCuePlacementGesture();abandonActiveShotGestures();abandonFineAimHolds();balls=state.balls.map(b=>({...b,rollQ:b.rollQ?[...b.rollQ]:[1,0,0,0]}));turn=state.turn;groups={...state.groups};ballInHand=state.ballInHand;gameOver=state.gameOver;winner=state.winner;breakShot=state.breakShot;aim=state.aim;power=state.power??power;spin=state.spin??spin;follow=state.follow??follow;shooting=false;shot=null;cueStrike=null;pendingAimReleaseShot=false;events.length=0;accumulator=0;postHitchTail=false;showPower(power);$('spin').value=spin;$('follow').value=follow;updateHUD()}
-function pocketBall(b){
+function pocketBall(b,pocketT=null){
  if(b.potted)return;
  // Preserve the last real ball pose. The ghost is render-only and is never
  // included in collision, rail, cue, scoring or placement calculations.
@@ -209,7 +209,18 @@ function pocketBall(b){
  pocketVisuals.push({id:b.id,x:b.x,y:b.y,
   rollQ:b.rollQ?[...b.rollQ]:[1,0,0,0],potted:false,targetX:well[0],targetY:well[1],elapsed:0});
  b.potted=true;b.vx=b.vy=0;
- if(shot){shot.pocketed.push(b.id);if(b.id===0)shot.scratch=true}
+ if(shot){
+  shot.pocketed.push(b.id);
+  // Open-table groups follow the first actual SOLID or STRIPE pocket entry,
+  // not the order in which balls appear in the physics array. Preserve the
+  // legacy pocketed event list for scoring, audio and replay consumers.
+  if(groupOf(b.id)!==null&&pocketT!==null){
+   const at=(shot.pocketTick||0)+pocketT,first=shot.firstGroupPocket;
+   if(!first||at<first.at-1e-9||(Math.abs(at-first.at)<=1e-9&&b.id<first.id))
+    shot.firstGroupPocket={id:b.id,at};
+  }
+  if(b.id===0)shot.scratch=true;
+ }
  renderDirty=true;
  queueSound('pocket',.85);
 }
@@ -227,7 +238,7 @@ for(const b of balls){b.vx=b.vy=0;b.spin=0;b.follow=0}
  const foul=s.scratch||!firstLegal||(!hadPocket&&!s.railAfterContact);
  if(s.breakShot&&eight){freshRack();$('status').textContent='8 ball on the break — rerack under Pool World house rules.';return}
  if(eight){gameOver=true;winner=!foul&&own!==null&&eightEligible&&remainingFor(turn)===0?turn:opponent(turn);$('status').textContent=`PLAYER ${winner} WINS · ${winner===turn?'legal 8-ball finish':'early or foul 8-ball'}`;updateHUD();return}
- if(!s.breakShot&&!foul&&own===null){const first=s.pocketed.find(id=>groupOf(id)!==null);if(first!==undefined){groups[turn]=groupOf(first);groups[opponent(turn)]=groups[turn]==='solids'?'stripes':'solids'}}
+ if(!s.breakShot&&!foul&&own===null){const first=s.firstGroupPocket?.id??s.pocketed.find(id=>groupOf(id)!==null);if(first!==undefined){groups[turn]=groupOf(first);groups[opponent(turn)]=groups[turn]==='solids'?'stripes':'solids'}}
  const legalPocket=s.pocketed.some(id=>id!==0&&(groups[turn]===null||groupOf(id)===groups[turn]));
  if(foul||!legalPocket)turn=opponent(turn);
  if(s.scratch){const c=balls[0];c.potted=false;const [x,y]=cuePosition();c.x=x;c.y=y}if(foul)ballInHand=true
@@ -850,6 +861,7 @@ const contacts=[];
 const contactPool=[];
 function physics(dt){
  pendingPreContactRails.length=0;
+ if(shot)shot.pocketTick=(shot.pocketTick||0)+1;
  if(beforePositions.length!==balls.length){
   beforePositions.length=balls.length;
   for(let i=0;i<balls.length;i++)beforePositions[i]=[0,0];
@@ -885,6 +897,8 @@ function physics(dt){
    // first contact and its real momentum transfer. Compare analytic swept
    // contact time with pocket entry time for both cue and object balls.
    let deferForEarlierImpact=false;
+   // Capture fraction is measured inside this physics tick, not array order.
+   let captureT=(fromX-hx)**2+(fromY-hy)**2<POCKET_CAPTURE_RADIUS2?0:1;
    if(travel2>1e-12){
     const psx=fromX-hx,psy=fromY-hy;
     const pb=2*(psx*travelX+psy*travelY);
@@ -893,6 +907,7 @@ function physics(dt){
     if(pc>=0&&pb<0&&pd>=0){
      const pocketT=(-pb-Math.sqrt(pd))/(2*travel2);
      if(pocketT>=0&&pocketT<=1){
+      captureT=pocketT;
       for(let oi=0;oi<balls.length;oi++){
        if(oi===bi)continue;
        const other=balls[oi];
@@ -944,7 +959,7 @@ function physics(dt){
      }
     }
    }
-   if(!deferForEarlierImpact)pocketBall(b);
+   if(!deferForEarlierImpact)pocketBall(b,captureT);
    break;
   }
  }if(b.potted)continue;collideJaw(b,before[bi],scale);constrainRail(b,before[bi]);
@@ -1086,7 +1101,7 @@ for(let ci=0;ci<contacts.length;){
   if(b.potted)continue;
   for(const [hx,hy] of holes){
    const dx=b.x-hx,dy=b.y-hy;
-   if(dx*dx+dy*dy<POCKET_CAPTURE_RADIUS2){pocketBall(b);break}
+   if(dx*dx+dy*dy<POCKET_CAPTURE_RADIUS2){pocketBall(b,1);break}
   }
  }
  // The displayed sphere must rotate by the same FINAL net displacement
