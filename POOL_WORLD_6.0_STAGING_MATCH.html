@@ -615,7 +615,6 @@ function resolveSimultaneousContacts(batch,start=0,end=batch.length){
  // The first member of a near-simultaneous batch may be an object/object
  // collision. Rail chronology must use the earliest REAL cue impulse in
  // the batch, not the batch's earlier non-cue contact time.
- let firstCueImpactT=Infinity;
  for(let batchIndex=start;batchIndex<end;batchIndex++){
   const {a,b,swept,nx:sweptNx,ny:sweptNy}=batch[batchIndex];
   if(a.potted||b.potted)continue;
@@ -632,8 +631,7 @@ function resolveSimultaneousContacts(batch,start=0,end=batch.length){
   }else{nx=dx/d;ny=dy/d}
   const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
   if(rel<0){
-   pairs.push({a,b,nx,ny,rel,overlap:swept?0:min-d});
-   if(a.id===0||b.id===0)firstCueImpactT=Math.min(firstCueImpactT,batch[batchIndex].t);
+   pairs.push({a,b,nx,ny,rel,overlap:swept?0:min-d,t:batch[batchIndex].t});
   }
  }
  if(pairs.length<2)return false;
@@ -708,8 +706,16 @@ function resolveSimultaneousContacts(batch,start=0,end=batch.length){
   for(const b of members){b.vx*=ratio;b.vy*=ratio;b.spin*=ratio;b.follow*=ratio}
  }
  if(shot&&shot.firstHit===null){
-  const cueHits=pairs.filter(p=>p.a.id===0||p.b.id===0).map(p=>p.a.id===0?p.b.id:p.a.id);
-  if(cueHits.length){shot.firstHit=Math.min(...cueHits);reconcileDeferredRailsAfterCueContact(firstCueImpactT)}
+  // Contacts grouped within 0.012 of a tick are not necessarily simultaneous.
+  // Award the earliest actual cue/object impulse, breaking exact ties by ID.
+  let firstCue=null;
+  for(const p of pairs){
+   if(p.a.id!==0&&p.b.id!==0)continue;
+   const id=p.a.id===0?p.b.id:p.a.id;
+   if(!firstCue||p.t<firstCue.t-1e-9||
+      (Math.abs(p.t-firstCue.t)<=1e-9&&id<firstCue.id))firstCue={id,t:p.t};
+  }
+  if(firstCue){shot.firstHit=firstCue.id;reconcileDeferredRailsAfterCueContact(firstCue.t)}
  }
  return true;
 }
